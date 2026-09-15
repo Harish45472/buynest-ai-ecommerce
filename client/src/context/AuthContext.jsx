@@ -43,6 +43,15 @@ export function AuthProvider({ children }) {
     return receivedUser;
   };
 
+  const loginWithGoogle = async (googleUser = {}) => {
+    const res = await api.post('/auth/google', googleUser);
+    const { token: receivedToken, user: receivedUser } = res.data;
+    localStorage.setItem('token', receivedToken);
+    setToken(receivedToken);
+    setUser(receivedUser);
+    return receivedUser;
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
@@ -56,6 +65,7 @@ export function AuthProvider({ children }) {
     isAdmin: user?.role === 'admin',
     login,
     register,
+    loginWithGoogle,
     logout
   };
 

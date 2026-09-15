@@ -99,3 +99,42 @@ exports.getMe = (req, res) => {
     res.status(500).json({ error: 'Failed to fetch user profile.' });
   }
 };
+
+exports.googleLogin = async (req, res) => {
+  try {
+    const { email, name } = req.body;
+    const googleEmail = (email || 'user.google@buynest.com').toLowerCase().trim();
+    const googleName = name || 'Pooja Sharma (Google)';
+
+    let userRow = db.prepare('SELECT * FROM users WHERE email = ?').get(googleEmail);
+
+    if (!userRow) {
+      // Auto-register new Google user
+      const placeholderHash = await bcrypt.hash(`google_${Date.now()}_${Math.random()}`, 10);
+      const insertRes = db.prepare(`
+        INSERT INTO users (name, email, password_hash, role)
+        VALUES (?, ?, ?, 'user')
+      `).run(googleName, googleEmail, placeholderHash);
+
+      userRow = db.prepare('SELECT * FROM users WHERE user_id = ?').get(insertRes.lastInsertRowid);
+    }
+
+    const user = {
+      user_id: userRow.user_id,
+      name: userRow.name,
+      email: userRow.email,
+      role: userRow.role
+    };
+
+    const token = jwt.sign(user, JWT_SECRET, { expiresIn: '7d' });
+
+    res.json({
+      message: 'Google login successful',
+      user,
+      token
+    });
+  } catch (err) {
+    console.error('Google login error:', err);
+    res.status(500).json({ error: 'Failed to authenticate with Google.' });
+  }
+};
