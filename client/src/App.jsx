@@ -19,6 +19,7 @@ function MainLayout() {
   const [activeView, setActiveView] = useState('home'); // 'home', 'checkout', 'orders', 'admin'
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedSubCategory, setSelectedSubCategory] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -46,6 +47,8 @@ function MainLayout() {
           setSelectedCategory(cat);
           if (activeView !== 'home') setActiveView('home');
         }}
+        selectedSubCategory={selectedSubCategory}
+        setSelectedSubCategory={setSelectedSubCategory}
         onOpenAiAssistant={() => setIsAiOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
         activeView={activeView}
@@ -88,6 +91,8 @@ function MainLayout() {
             setSearchTerm={setSearchTerm}
             selectedCategory={selectedCategory}
             setSelectedCategory={setSelectedCategory}
+            selectedSubCategory={selectedSubCategory}
+            setSelectedSubCategory={setSelectedSubCategory}
             onSelectProduct={(p) => setSelectedProduct(p)}
             onOpenAiAssistant={() => setIsAiOpen(true)}
           />

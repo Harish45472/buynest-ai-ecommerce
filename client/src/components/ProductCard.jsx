@@ -29,10 +29,15 @@ export default function ProductCard({ product, onSelectProduct }) {
         />
 
         {/* Category Pill */}
-        <div className="absolute top-3 left-3">
-          <span className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider bg-white/90 backdrop-blur-md text-slate-800 rounded-full shadow-sm">
+        <div className="absolute top-3 left-3 flex flex-col gap-1">
+          <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-white/95 backdrop-blur-md text-slate-900 rounded-full shadow-sm">
             {product.category}
           </span>
+          {product.sub_category && product.sub_category !== 'General' && (
+            <span className="px-2 py-0.5 text-[9px] font-bold bg-slate-900/80 text-white rounded-full shadow-xs w-fit">
+              {product.sub_category}
+            </span>
+          )}
         </div>
 
         {/* Stock Badge */}
@@ -86,9 +91,9 @@ export default function ProductCard({ product, onSelectProduct }) {
         {/* Price & Action */}
         <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
           <div>
-            <span className="text-xs text-slate-400 font-medium block">Price</span>
-            <span className="text-lg font-black text-slate-900">
-              ${Number(product.price).toFixed(2)}
+            <span className="text-[11px] text-slate-400 font-semibold block">Price</span>
+            <span className="text-base sm:text-lg font-black text-slate-900">
+              ₹{Number(product.price).toLocaleString('en-IN')}
             </span>
           </div>
 

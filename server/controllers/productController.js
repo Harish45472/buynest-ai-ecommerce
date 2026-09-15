@@ -2,19 +2,24 @@ const db = require('../db/database');
 
 exports.getProducts = (req, res) => {
   try {
-    const { q, category, minPrice, maxPrice, inStock, sortBy } = req.query;
+    const { q, category, sub_category, minPrice, maxPrice, inStock, sortBy } = req.query;
 
     let query = 'SELECT * FROM products WHERE 1=1';
     const params = [];
 
     if (q && q.trim()) {
-      query += ' AND (name LIKE ? OR description LIKE ?)';
-      params.push(`%${q.trim()}%`, `%${q.trim()}%`);
+      query += ' AND (name LIKE ? OR description LIKE ? OR sub_category LIKE ?)';
+      params.push(`%${q.trim()}%`, `%${q.trim()}%`, `%${q.trim()}%`);
     }
 
     if (category && category !== 'all') {
       query += ' AND LOWER(category) = LOWER(?)';
       params.push(category);
+    }
+
+    if (sub_category && sub_category !== 'all') {
+      query += ' AND LOWER(sub_category) = LOWER(?)';
+      params.push(sub_category);
     }
 
     if (minPrice && !isNaN(Number(minPrice))) {
@@ -82,7 +87,7 @@ exports.getProductById = (req, res) => {
 
 exports.createProduct = (req, res) => {
   try {
-    const { name, category, description, price, stock, image_url, featured } = req.body;
+    const { name, category, sub_category = 'General', description, price, stock, image_url, featured } = req.body;
 
     if (!name || !category || !description || price === undefined || stock === undefined) {
       return res.status(400).json({ error: 'Name, category, description, price, and stock are required.' });
@@ -103,9 +108,9 @@ exports.createProduct = (req, res) => {
     const finalImage = image_url && image_url.trim() ? image_url.trim() : defaultImg;
 
     const result = db.prepare(`
-      INSERT INTO products (name, category, description, price, stock, image_url, rating, reviews_count, featured)
-      VALUES (?, ?, ?, ?, ?, ?, 4.5, 0, ?)
-    `).run(name.trim(), category.trim(), description.trim(), numPrice, numStock, finalImage, featured ? 1 : 0);
+      INSERT INTO products (name, category, sub_category, description, price, stock, image_url, rating, reviews_count, featured)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 4.5, 0, ?)
+    `).run(name.trim(), category.trim(), (sub_category || 'General').trim(), description.trim(), numPrice, numStock, finalImage, featured ? 1 : 0);
 
     const newProduct = db.prepare('SELECT * FROM products WHERE product_id = ?').get(result.lastInsertRowid);
     res.status(201).json({ message: 'Product created successfully', product: newProduct });
@@ -118,7 +123,7 @@ exports.createProduct = (req, res) => {
 exports.updateProduct = (req, res) => {
   try {
     const { id } = req.params;
-    const { name, category, description, price, stock, image_url, featured, rating } = req.body;
+    const { name, category, sub_category, description, price, stock, image_url, featured, rating } = req.body;
 
     const existing = db.prepare('SELECT * FROM products WHERE product_id = ?').get(id);
     if (!existing) {
@@ -127,6 +132,7 @@ exports.updateProduct = (req, res) => {
 
     const updatedName = name !== undefined ? name.trim() : existing.name;
     const updatedCat = category !== undefined ? category.trim() : existing.category;
+    const updatedSubCat = sub_category !== undefined ? sub_category.trim() : (existing.sub_category || 'General');
     const updatedDesc = description !== undefined ? description.trim() : existing.description;
     const updatedPrice = price !== undefined ? Number(price) : existing.price;
     const updatedStock = stock !== undefined ? parseInt(stock, 10) : existing.stock;
@@ -136,9 +142,9 @@ exports.updateProduct = (req, res) => {
 
     db.prepare(`
       UPDATE products
-      SET name = ?, category = ?, description = ?, price = ?, stock = ?, image_url = ?, featured = ?, rating = ?
+      SET name = ?, category = ?, sub_category = ?, description = ?, price = ?, stock = ?, image_url = ?, featured = ?, rating = ?
       WHERE product_id = ?
-    `).run(updatedName, updatedCat, updatedDesc, updatedPrice, updatedStock, updatedImg, updatedFeatured, updatedRating, id);
+    `).run(updatedName, updatedCat, updatedSubCat, updatedDesc, updatedPrice, updatedStock, updatedImg, updatedFeatured, updatedRating, id);
 
     const updatedProduct = db.prepare('SELECT * FROM products WHERE product_id = ?').get(id);
     res.json({ message: 'Product updated successfully', product: updatedProduct });

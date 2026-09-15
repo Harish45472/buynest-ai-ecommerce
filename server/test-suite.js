@@ -36,17 +36,24 @@ async function runTests() {
   console.log('✅ 3. Admin Authentication Passed');
 
   // 4. Products: Listing & Filtering
-  const productsRes = await fetch(`${BASE_URL}/products?category=Electronics&sortBy=price_asc`);
+  const productsRes = await fetch(`${BASE_URL}/products?category=Gadgets%20%26%20Tech&sortBy=price_asc`);
   const productsData = await productsRes.json();
-  assert(productsData.products.length > 0, 'No electronics products found');
-  console.log(`✅ 4. Products Filtering Passed (${productsData.products.length} Electronics products)`);
+  assert(productsData.products.length > 0, 'No Gadgets & Tech products found');
+  console.log(`✅ 4. Products Filtering Passed (${productsData.products.length} Gadgets & Tech products)`);
+
+  // 4b. Sub-category Filtering
+  const subCatRes = await fetch(`${BASE_URL}/products?category=Men&sub_category=Topwear`);
+  const subCatData = await subCatRes.json();
+  assert(subCatData.products.length > 0, 'No Men Topwear products found');
+  assert(subCatData.products.every(p => p.sub_category === 'Topwear'), 'Non-topwear product returned');
+  console.log(`✅ 4b. Sub-category Filtering Passed (${subCatData.products.length} Men Topwear products)`);
 
   // 5. Search
-  const searchRes = await fetch(`${BASE_URL}/products?q=Headphones`);
+  const searchRes = await fetch(`${BASE_URL}/products?q=Earbuds`);
   const searchData = await searchRes.json();
-  assert(searchData.products.some(p => p.name.includes('Headphones')), 'Search for headphones failed');
+  assert(searchData.products.some(p => p.name.includes('Earbuds')), 'Search for Earbuds failed');
   const testProduct = searchData.products[0];
-  console.log(`✅ 5. Search Passed (Found: "${testProduct.name}")`);
+  console.log(`✅ 5. Search Passed (Found: "${testProduct.name}" at ₹${testProduct.price.toLocaleString('en-IN')})`);
 
   // 6. Cart: Clear existing and Add Item
   await fetch(`${BASE_URL}/cart`, {
@@ -88,18 +95,18 @@ async function runTests() {
       'Authorization': `Bearer ${userToken}`
     },
     body: JSON.stringify({
-      shipping_name: 'Test Customer',
-      shipping_address: '100 Tech Blvd',
-      shipping_city: 'Silicon Valley',
-      shipping_postal: '94025',
-      payment_method: 'Credit Card (Demo)'
+      shipping_name: 'Pooja Sharma',
+      shipping_address: 'Flat 402, Lotus Residency, MG Road',
+      shipping_city: 'Bengaluru',
+      shipping_postal: '560001',
+      payment_method: 'UPI (Google Pay / PhonePe)'
     })
   });
   const orderData = await orderRes.json();
   assert(orderData.order, 'Order creation failed');
   assert.strictEqual(orderData.order.status, 'pending');
   const createdOrderId = orderData.order.order_id;
-  console.log(`✅ 8. Order Placement & Checkout Passed (Created Order #${createdOrderId})`);
+  console.log(`✅ 8. Order Placement & Checkout Passed (Created Order #${createdOrderId} - Total: ₹${orderData.order.total_amount.toLocaleString('en-IN')})`);
 
   // Verify stock deduction in products table
   const updatedProdRes = await fetch(`${BASE_URL}/products/${testProduct.product_id}`);
@@ -143,7 +150,7 @@ async function runTests() {
   const statsData = await statsRes.json();
   assert(statsData.stats.totalRevenue > 0, 'Admin revenue missing');
   assert(statsData.stats.totalOrders > 0, 'Admin orders count missing');
-  console.log(`✅ 13. Admin KPI Metrics Verified (Revenue: $${statsData.stats.totalRevenue}, Orders: ${statsData.stats.totalOrders})`);
+  console.log(`✅ 13. Admin KPI Metrics Verified (Revenue: ₹${statsData.stats.totalRevenue.toLocaleString('en-IN')}, Orders: ${statsData.stats.totalOrders})`);
 
   // 14. Admin Product CRUD: Create, Update, Delete
   const createProdRes = await fetch(`${BASE_URL}/products`, {
@@ -153,10 +160,11 @@ async function runTests() {
       'Authorization': `Bearer ${adminToken}`
     },
     body: JSON.stringify({
-      name: 'Temp Test Gadget',
-      category: 'Electronics',
+      name: 'Temp Test Kurtas',
+      category: 'Men',
+      sub_category: 'Ethnic Wear',
       description: 'Temporary item for verification test',
-      price: 29.99,
+      price: 1999,
       stock: 10,
       image_url: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&q=80'
     })
@@ -175,13 +183,13 @@ async function runTests() {
   const aiChatRes = await fetch(`${BASE_URL}/ai/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: 'Recommend fitness gear under $100' })
+    body: JSON.stringify({ message: 'Recommend kurta under ₹2000' })
   });
   const aiChatData = await aiChatRes.json();
   assert(aiChatData.reply, 'AI reply missing');
   assert(aiChatData.recommendations.length > 0, 'AI recommendations missing');
-  assert(aiChatData.recommendations.every(p => p.price <= 100), 'AI recommended products exceeding budget!');
-  console.log(`✅ 15. AI Shopping Assistant Passed (Recommended: ${aiChatData.recommendations.map(p => `${p.name} ($${p.price})`).join(', ')})`);
+  assert(aiChatData.recommendations.every(p => p.price <= 2000), 'AI recommended products exceeding budget!');
+  console.log(`✅ 15. AI Shopping Assistant Passed (Recommended: ${aiChatData.recommendations.map(p => `${p.name} (₹${p.price.toLocaleString('en-IN')})`).join(', ')})`);
 
   console.log('\n🎉 ALL 15 AUTOMATED VERIFICATION TESTS PASSED SUCCESSFULLY! 🎉\n');
 }

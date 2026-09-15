@@ -45,6 +45,7 @@ async function initDatabase() {
       product_id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       category TEXT NOT NULL,
+      sub_category TEXT DEFAULT 'General',
       description TEXT NOT NULL,
       price REAL NOT NULL,
       stock INTEGER NOT NULL DEFAULT 0,
@@ -90,6 +91,12 @@ async function initDatabase() {
       FOREIGN KEY (product_id) REFERENCES products(product_id)
     );
   `);
+
+  try {
+    rawDb.run("ALTER TABLE products ADD COLUMN sub_category TEXT DEFAULT 'General';");
+  } catch (e) {
+    // Column already exists
+  }
 
   saveToDisk();
   return rawDb;

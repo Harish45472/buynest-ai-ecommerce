@@ -97,10 +97,10 @@ export default function ProductDetailModal({ product, onClose, onSelectProduct }
               {/* Price */}
               <div className="mt-3 flex items-baseline gap-2">
                 <span className="text-3xl font-black text-slate-900">
-                  ${Number(product.price).toFixed(2)}
+                  ₹{Number(product.price).toLocaleString('en-IN')}
                 </span>
-                <span className="text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md">
-                  Free standard shipping over $50
+                <span className="text-xs text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-lg">
+                  Free shipping on orders &gt; ₹999
                 </span>
               </div>
 
@@ -196,7 +196,7 @@ export default function ProductDetailModal({ product, onClose, onSelectProduct }
                   }`}
                 >
                   <ShoppingCart className="w-4 h-4" />
-                  {isOutOfStock ? 'Sold Out' : `Add ${quantity} to Cart • $${(product.price * quantity).toFixed(2)}`}
+                  {isOutOfStock ? 'Sold Out' : `Add ${quantity} to Cart • ₹${(product.price * quantity).toLocaleString('en-IN')}`}
                 </button>
               </div>
             </div>
@@ -226,7 +226,7 @@ export default function ProductDetailModal({ product, onClose, onSelectProduct }
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-slate-800 truncate">{rel.name}</p>
-                    <p className="text-xs font-black text-emerald-600 mt-0.5">${Number(rel.price).toFixed(2)}</p>
+                    <p className="text-xs font-black text-emerald-600 mt-0.5">₹{Number(rel.price).toLocaleString('en-IN')}</p>
                   </div>
                   <button
                     onClick={(e) => {

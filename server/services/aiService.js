@@ -7,26 +7,31 @@ const db = require('../db/database');
 function localSmartRecommendation(userMessage, allProducts) {
   const query = userMessage.toLowerCase();
 
-  // 1. Detect budget / price constraints
+  // 1. Detect budget / price constraints (supports ₹, Rs, INR, k, e.g. "under 2k", "below ₹1500", "under 1000 rupees")
   let maxPrice = null;
-  const underMatch = query.match(/(?:under|below|less than|max|budget of)\s*\$?(\d+(?:\.\d+)?)/i);
+  const underMatch = query.match(/(?:under|below|less than|max|budget of|within)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(k|thousand|rupees|rs)?/i);
   if (underMatch) {
-    maxPrice = parseFloat(underMatch[1]);
+    let val = parseFloat(underMatch[1]);
+    if (underMatch[2] && underMatch[2].toLowerCase().startsWith('k')) {
+      val *= 1000;
+    }
+    maxPrice = val;
   }
 
   // 2. Extract keyword tokens
   const cleanTokens = query
     .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
-    .filter(t => t.length > 2 && !['the', 'and', 'for', 'with', 'that', 'this', 'have', 'you', 'can', 'what', 'some', 'looking'].includes(t));
+    .filter(t => t.length > 2 && !['the', 'and', 'for', 'with', 'that', 'this', 'have', 'you', 'can', 'what', 'some', 'looking', 'item', 'items', 'show'].includes(t));
 
-  // 3. Category & intent mapping
+  // 3. Category & intent mapping tuned for Indian e-commerce
   const categoryKeywords = {
-    'Electronics': ['laptop', 'computer', 'mac', 'pc', 'code', 'programming', 'headphone', 'audio', 'earphone', 'sound', 'camera', 'photo', 'watch', 'tech', 'gadget', 'screen', 'oled', 'bluetooth'],
-    'Fashion': ['coat', 'jacket', 'wool', 'sweater', 'cotton', 'clothes', 'wear', 'shoes', 'running', 'sneaker', 'apparel', 'style', 'dress', 'shirt'],
-    'Home & Living': ['coffee', 'carafe', 'pour', 'diffuser', 'aroma', 'table', 'dining', 'ceramic', 'decor', 'kitchen', 'home'],
-    'Sports & Fitness': ['gym', 'workout', 'fitness', 'dumbbell', 'weight', 'yoga', 'mat', 'exercise', 'bottle', 'flask', 'athletic', 'train'],
-    'Accessories': ['backpack', 'bag', 'leather', 'sunglasses', 'glasses', 'shades', 'watch', 'chronograph', 'strap', 'wallet']
+    'Men': ['men', 'mens', 'shirt', 'tshirt', 't-shirt', 'jeans', 'trouser', 'kurta', 'chikankari', 'nehru', 'jacket', 'sneakers', 'watch', 'male', 'boy', 'wallet', 'belt'],
+    'Women': ['women', 'womens', 'ladies', 'kurta', 'suit', 'anarkali', 'saree', 'sari', 'banarasi', 'dress', 'maxi', 'jeggings', 'tote', 'handbag', 'heels', 'sandals', 'girl'],
+    'Kids': ['kid', 'kids', 'child', 'children', 'boy', 'girl', 'dinosaur', 'frock', 'led', 'toy', 'baby'],
+    'Home & Living': ['home', 'kitchen', 'dining', 'dinner', 'plate', 'diffuser', 'aroma', 'carafe', 'coffee', 'bedsheet', 'cotton', 'cork', 'yoga', 'flask', 'bottle', 'decor'],
+    'Beauty & Grooming': ['beauty', 'skincare', 'serum', 'vitamin c', 'sunscreen', 'spf', 'perfume', 'edp', 'fragrance', 'trimmer', 'beard', 'shave', 'grooming', 'hair'],
+    'Gadgets & Tech': ['gadget', 'tech', 'laptop', 'computer', 'mac', 'pc', 'headphones', 'earbuds', 'tws', 'smartwatch', 'amoled', 'speaker', 'bluetooth', 'anc', 'noise cancellation', 'audio']
   };
 
   // 4. Score each product
@@ -35,20 +40,22 @@ function localSmartRecommendation(userMessage, allProducts) {
     const nameLower = p.name.toLowerCase();
     const descLower = p.description.toLowerCase();
     const catLower = p.category.toLowerCase();
+    const subCatLower = (p.sub_category || '').toLowerCase();
 
     // Price constraint check
     if (maxPrice !== null) {
       if (p.price <= maxPrice) {
-        score += 30; // Strong bonus for fitting within requested budget
+        score += 35; // Strong bonus for fitting within requested budget
       } else {
-        score -= 50; // Penalty for exceeding budget
+        score -= 60; // Penalty for exceeding budget
       }
     }
 
-    // Direct name match
+    // Direct token matches
     cleanTokens.forEach(token => {
-      if (nameLower.includes(token)) score += 25;
-      if (descLower.includes(token)) score += 10;
+      if (nameLower.includes(token)) score += 30;
+      if (subCatLower.includes(token)) score += 25;
+      if (descLower.includes(token)) score += 12;
       if (catLower.includes(token)) score += 15;
     });
 
@@ -56,7 +63,7 @@ function localSmartRecommendation(userMessage, allProducts) {
     for (const [cat, kws] of Object.entries(categoryKeywords)) {
       if (kws.some(k => query.includes(k))) {
         if (p.category.toLowerCase() === cat.toLowerCase()) {
-          score += 20;
+          score += 25;
         }
       }
     }
@@ -75,27 +82,29 @@ function localSmartRecommendation(userMessage, allProducts) {
   // Take top 1 to 4 items with positive score
   const topMatches = scored.filter(s => s.score > 15).slice(0, 4).map(s => s.product);
 
-  // Fallback if query was generic (e.g. "what's popular?", "recommend something")
+  // Fallback if query was generic
   const recommendations = topMatches.length > 0 
     ? topMatches 
-    : allProducts.filter(p => p.featured && p.stock > 0).slice(0, 3);
+    : allProducts.filter(p => p.featured && p.stock > 0).slice(0, 4);
 
-  // 5. Generate dynamic helpful conversational reply
+  // 5. Generate dynamic helpful conversational reply in INR (₹)
   let reply = '';
   if (recommendations.length > 0) {
     if (maxPrice !== null) {
-      reply = `Here are the best matching items within your \$${maxPrice} budget! Each of these offers exceptional value and great customer reviews.`;
-    } else if (cleanTokens.some(t => ['laptop', 'pc', 'code', 'programming'].includes(t))) {
-      reply = `For your computing and productivity needs, here are our top recommendations equipped with fast processors and vibrant displays:`;
-    } else if (cleanTokens.some(t => ['sound', 'audio', 'music', 'headphones', 'earphone'].includes(t))) {
-      reply = `If you're seeking premium audio quality and long battery life, here are our top-rated sound gear picks:`;
-    } else if (cleanTokens.some(t => ['gym', 'workout', 'fitness', 'exercise'].includes(t))) {
-      reply = `Great choice staying active! Here are our best-rated fitness gear and equipment designed to help reach your goals:`;
+      reply = `Here are our best matching options within your ₹${maxPrice.toLocaleString('en-IN')} budget! Each of these offers high quality, verified customer reviews, and fast dispatch:`;
+    } else if (cleanTokens.some(t => ['kurta', 'chikankari', 'saree', 'ethnic', 'festive', 'nehru'].includes(t))) {
+      reply = `For your festive and ethnic celebrations, here are our most popular and elegant traditional designs:`;
+    } else if (cleanTokens.some(t => ['headphones', 'earbuds', 'tws', 'sound', 'audio', 'anc'].includes(t))) {
+      reply = `If you're looking for premium sound quality and long battery life, here are our top-rated audio gadgets:`;
+    } else if (cleanTokens.some(t => ['trimmer', 'serum', 'skincare', 'perfume', 'fragrance'].includes(t))) {
+      reply = `Here are our trending personal care and grooming picks with natural formulations and high ratings:`;
+    } else if (cleanTokens.some(t => ['laptop', 'pc', 'quantum'].includes(t))) {
+      reply = `For high performance computing, multitasking, and productivity, here are our top laptop choices:`;
     } else {
-      reply = `Based on your request, I've curated these top recommendations from our catalogue that best match what you're looking for:`;
+      reply = `Based on your request, I've curated these top-rated items from our store catalogue:`;
     }
   } else {
-    reply = `I couldn't find exact matches for your query, but here are some of our most popular and highly-rated products in the store right now:`;
+    reply = `I couldn't find an exact match, but here are some of our most trending and top-rated products in India right now:`;
   }
 
   return { reply, recommendations };
@@ -106,13 +115,13 @@ function localSmartRecommendation(userMessage, allProducts) {
  */
 async function callExternalLLM(apiKey, provider, userMessage, conversationHistory, allProducts) {
   const catalogSummary = allProducts.map(p => 
-    `ID: ${p.product_id} | Name: ${p.name} | Category: ${p.category} | Price: \$${p.price} | Stock: ${p.stock} | Rating: ${p.rating} | Description: ${p.description}`
+    `ID: ${p.product_id} | Name: ${p.name} | Category: ${p.category} | Sub-Category: ${p.sub_category || 'General'} | Price: ₹${p.price} | Stock: ${p.stock} | Rating: ${p.rating} | Description: ${p.description}`
   ).join('\n');
 
-  const systemPrompt = `You are "Aura", an expert, friendly AI Shopping Assistant for our modern e-commerce store.
-Your mission is to guide shoppers, understand their preferences, budget, and recommend the best products from our inventory.
+  const systemPrompt = `You are "Aura", an expert, friendly AI Shopping Assistant for a leading Indian modern e-commerce platform.
+Your mission is to guide shoppers, understand their preferences, budget (in Indian Rupees ₹), and recommend the best products from our inventory.
 
-OUR CURRENT INVENTORY CATALOG:
+OUR CURRENT INVENTORY CATALOG (All prices in INR ₹):
 ${catalogSummary}
 
 CRITICAL RULES:

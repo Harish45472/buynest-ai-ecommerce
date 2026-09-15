@@ -157,7 +157,7 @@ export default function OrderHistoryPage({ onBackToShopping, onSelectProduct, hi
                   <div className="text-right">
                     <span className="text-xs text-slate-400 font-semibold block">Total Paid</span>
                     <span className="text-lg font-black text-slate-900">
-                      ${Number(order.total_amount).toFixed(2)}
+                      ₹{Number(order.total_amount).toLocaleString('en-IN')}
                     </span>
                   </div>
                 </div>
@@ -242,14 +242,14 @@ export default function OrderHistoryPage({ onBackToShopping, onSelectProduct, hi
                               {item.name}
                             </p>
                             <p className="text-xs text-slate-400 mt-0.5">
-                              Quantity: <strong className="text-slate-700">{item.quantity}</strong> × ${Number(item.price).toFixed(2)}
+                              Quantity: <strong className="text-slate-700">{item.quantity}</strong> × ₹{Number(item.price).toLocaleString('en-IN')}
                             </p>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-3">
                           <span className="text-xs sm:text-sm font-black text-slate-900">
-                            ${(item.price * item.quantity).toFixed(2)}
+                            ₹{(item.price * item.quantity).toLocaleString('en-IN')}
                           </span>
                           <button
                             onClick={() => addToCart(item.product_id, 1)}

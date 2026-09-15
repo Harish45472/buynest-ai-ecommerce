@@ -36,9 +36,9 @@ exports.createOrder = (req, res) => {
         }
       }
 
-      // 3. Calculate total amount (Free shipping over $50, else $10)
+      // 3. Calculate total amount (Free shipping over ₹999, else ₹99)
       const subtotal = cartItems.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-      const shippingFee = subtotal > 50 ? 0 : 9.99;
+      const shippingFee = subtotal >= 999 ? 0 : 99;
       const totalAmount = Number((subtotal + shippingFee).toFixed(2));
 
       // 4. Create Order record

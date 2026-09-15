@@ -98,7 +98,8 @@ export default function AdminDashboard({ onBackToShopping }) {
     setEditingProduct(null);
     setProductForm({
       name: '',
-      category: categories[0]?.name || 'Electronics',
+      category: categories[0]?.name || 'Men',
+      sub_category: 'Topwear',
       description: '',
       price: '',
       stock: '',
@@ -113,6 +114,7 @@ export default function AdminDashboard({ onBackToShopping }) {
     setProductForm({
       name: prod.name,
       category: prod.category,
+      sub_category: prod.sub_category || 'General',
       description: prod.description,
       price: prod.price,
       stock: prod.stock,
@@ -242,7 +244,7 @@ export default function AdminDashboard({ onBackToShopping }) {
           <div>
             <span className="text-xs font-semibold text-slate-400">Total Net Revenue</span>
             <h3 className="text-xl font-black text-slate-900">
-              ${stats.totalRevenue.toFixed(2)}
+              ₹{stats.totalRevenue.toLocaleString('en-IN')}
             </h3>
           </div>
         </div>
@@ -356,12 +358,17 @@ export default function AdminDashboard({ onBackToShopping }) {
                         </div>
                       </td>
                       <td className="py-3 px-4 font-semibold text-slate-700">
-                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[10px]">
+                        <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] font-bold">
                           {prod.category}
                         </span>
+                        {prod.sub_category && prod.sub_category !== 'General' && (
+                          <span className="block text-[9px] text-slate-400 font-semibold mt-0.5">
+                            {prod.sub_category}
+                          </span>
+                        )}
                       </td>
-                      <td className="py-3 px-4 font-bold text-slate-900">
-                        ${Number(prod.price).toFixed(2)}
+                      <td className="py-3 px-4 font-black text-slate-900">
+                        ₹{Number(prod.price).toLocaleString('en-IN')}
                       </td>
                       <td className="py-3 px-4">
                         {prod.stock <= 0 ? (
@@ -457,7 +464,7 @@ export default function AdminDashboard({ onBackToShopping }) {
                         <span className="font-medium text-slate-700">{ord.items?.length || 0} product(s)</span>
                       </td>
                       <td className="py-3.5 px-4 font-black text-slate-900">
-                        ${Number(ord.total_amount).toFixed(2)}
+                        ₹{Number(ord.total_amount).toLocaleString('en-IN')}
                       </td>
                       <td className="py-3.5 px-4 text-[11px] text-slate-400">
                         {new Date(ord.created_at).toLocaleDateString()}
@@ -601,29 +608,42 @@ export default function AdminDashboard({ onBackToShopping }) {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Price ($)</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Sub-Category</label>
                   <input
-                    type="number"
-                    step="0.01"
-                    required
-                    value={productForm.price}
-                    onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                    placeholder="99.99"
+                    type="text"
+                    value={productForm.sub_category}
+                    onChange={(e) => setProductForm({ ...productForm, sub_category: e.target.value })}
+                    placeholder="e.g. Kurtas, Smart Watches"
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Stock Quantity</label>
-                <input
-                  type="number"
-                  required
-                  value={productForm.stock}
-                  onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
-                  placeholder="e.g. 25"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Price (₹)</label>
+                  <input
+                    type="number"
+                    step="1"
+                    required
+                    value={productForm.price}
+                    onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                    placeholder="1499"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Stock Quantity</label>
+                  <input
+                    type="number"
+                    required
+                    value={productForm.stock}
+                    onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
+                    placeholder="e.g. 25"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
               </div>
 
               <div>

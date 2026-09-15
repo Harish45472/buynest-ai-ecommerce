@@ -9,7 +9,7 @@ export default function AiAssistant({ isOpen, onClose, onSelectProduct }) {
     {
       id: 1,
       sender: 'assistant',
-      text: "Hello! I'm Aura, your AI shopping assistant. What are you looking for today? Tell me your preferred category, budget, or specifications!",
+      text: "Namaste! I'm Aura, your AI shopping assistant. Looking for festive kurtas, running sneakers, wireless earbuds, or home essentials? Tell me what you need and your budget in Indian Rupees!",
       recommendations: []
     }
   ]);
@@ -262,7 +262,7 @@ export default function AiAssistant({ isOpen, onClose, onSelectProduct }) {
                         </h5>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs font-black text-slate-900">
-                            ${Number(prod.price).toFixed(2)}
+                            ₹{Number(prod.price).toLocaleString('en-IN')}
                           </span>
                           {prod.stock > 0 ? (
                             <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded">
@@ -316,11 +316,18 @@ export default function AiAssistant({ isOpen, onClose, onSelectProduct }) {
 
       {/* Suggested Prompt Chips */}
       <div className="px-4 py-2 border-t border-slate-100 bg-white overflow-x-auto whitespace-nowrap scrollbar-none flex gap-1.5">
-        {promptSuggestions.map((prompt, idx) => (
+        {[
+          "Festive kurtas under ₹2500",
+          "ANC headphones under ₹5000",
+          "Casual sneakers under ₹2500",
+          "Beard trimmer under ₹1500",
+          "Vitamin C serum for glow",
+          "King size cotton bedsheets"
+        ].map((prompt, idx) => (
           <button
             key={idx}
             onClick={() => handleSend(prompt)}
-            className="text-[11px] font-medium text-slate-600 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 px-3 py-1 rounded-full transition shrink-0"
+            className="text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 px-3 py-1 rounded-full transition shrink-0"
           >
             {prompt}
           </button>
@@ -340,7 +347,7 @@ export default function AiAssistant({ isOpen, onClose, onSelectProduct }) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask Aura anything (e.g. 'Laptop under $1200')..."
+            placeholder="Ask Aura anything (e.g. 'Kurtas under ₹2000')..."
             className="flex-1 px-4 py-2.5 bg-slate-100 rounded-full text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:bg-white transition"
           />
           <button
