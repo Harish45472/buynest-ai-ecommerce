@@ -44,16 +44,37 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS products (
       product_id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
+      brand TEXT DEFAULT 'BUYNEST Select',
       category TEXT NOT NULL,
       sub_category TEXT DEFAULT 'General',
       description TEXT NOT NULL,
       price REAL NOT NULL,
+      mrp REAL DEFAULT 0,
+      discount_percent INTEGER DEFAULT 0,
       stock INTEGER NOT NULL DEFAULT 0,
       image_url TEXT,
+      images TEXT,
+      sizes TEXT,
+      colors TEXT,
       rating REAL DEFAULT 4.5,
       reviews_count INTEGER DEFAULT 0,
+      seller_name TEXT DEFAULT 'BUYNEST Retail',
+      specifications TEXT,
+      tags TEXT,
+      gender TEXT DEFAULT 'Unisex',
       featured INTEGER DEFAULT 0,
+      is_popular INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS wishlist (
+      wishlist_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      product_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+      FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
+      UNIQUE(user_id, product_id)
     );
 
     CREATE TABLE IF NOT EXISTS cart (
@@ -92,10 +113,27 @@ async function initDatabase() {
     );
   `);
 
-  try {
-    rawDb.run("ALTER TABLE products ADD COLUMN sub_category TEXT DEFAULT 'General';");
-  } catch (e) {
-    // Column already exists
+  const columnsToAdd = [
+    "ALTER TABLE products ADD COLUMN sub_category TEXT DEFAULT 'General';",
+    "ALTER TABLE products ADD COLUMN brand TEXT DEFAULT 'BUYNEST Select';",
+    "ALTER TABLE products ADD COLUMN mrp REAL DEFAULT 0;",
+    "ALTER TABLE products ADD COLUMN discount_percent INTEGER DEFAULT 0;",
+    "ALTER TABLE products ADD COLUMN images TEXT;",
+    "ALTER TABLE products ADD COLUMN sizes TEXT;",
+    "ALTER TABLE products ADD COLUMN colors TEXT;",
+    "ALTER TABLE products ADD COLUMN seller_name TEXT DEFAULT 'BUYNEST Retail';",
+    "ALTER TABLE products ADD COLUMN specifications TEXT;",
+    "ALTER TABLE products ADD COLUMN tags TEXT;",
+    "ALTER TABLE products ADD COLUMN gender TEXT DEFAULT 'Unisex';",
+    "ALTER TABLE products ADD COLUMN is_popular INTEGER DEFAULT 0;"
+  ];
+
+  for (const colSql of columnsToAdd) {
+    try {
+      rawDb.run(colSql);
+    } catch (e) {
+      // Column already exists
+    }
   }
 
   saveToDisk();

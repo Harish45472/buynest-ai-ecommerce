@@ -24,20 +24,22 @@ function localSmartRecommendation(userMessage, allProducts) {
     .split(/\s+/)
     .filter(t => t.length > 2 && !['the', 'and', 'for', 'with', 'that', 'this', 'have', 'you', 'can', 'what', 'some', 'looking', 'item', 'items', 'show'].includes(t));
 
-  // 3. Category & intent mapping tuned for Indian e-commerce
+  // 3. Category & intent mapping tuned for Indian e-commerce marketplace BUYNEST
   const categoryKeywords = {
-    'Men': ['men', 'mens', 'shirt', 'tshirt', 't-shirt', 'jeans', 'trouser', 'kurta', 'chikankari', 'nehru', 'jacket', 'sneakers', 'watch', 'male', 'boy', 'wallet', 'belt'],
-    'Women': ['women', 'womens', 'ladies', 'kurta', 'suit', 'anarkali', 'saree', 'sari', 'banarasi', 'dress', 'maxi', 'jeggings', 'tote', 'handbag', 'heels', 'sandals', 'girl'],
-    'Kids': ['kid', 'kids', 'child', 'children', 'boy', 'girl', 'dinosaur', 'frock', 'led', 'toy', 'baby'],
-    'Home & Living': ['home', 'kitchen', 'dining', 'dinner', 'plate', 'diffuser', 'aroma', 'carafe', 'coffee', 'bedsheet', 'cotton', 'cork', 'yoga', 'flask', 'bottle', 'decor'],
-    'Beauty & Grooming': ['beauty', 'skincare', 'serum', 'vitamin c', 'sunscreen', 'spf', 'perfume', 'edp', 'fragrance', 'trimmer', 'beard', 'shave', 'grooming', 'hair'],
-    'Gadgets & Tech': ['gadget', 'tech', 'laptop', 'computer', 'mac', 'pc', 'headphones', 'earbuds', 'tws', 'smartwatch', 'amoled', 'speaker', 'bluetooth', 'anc', 'noise cancellation', 'audio']
+    'Men': ['men', 'mens', 'shirt', 'tshirt', 't-shirt', 'jeans', 'trouser', 'jacket', 'shoes', 'watch', 'wallet', 'bag', 'sunglasses', 'male', 'boy', 'roadster', 'wrogn', 'peter england', 'allen solly', 'flying machine', 'blackberrys', 'uspa'],
+    'Women': ['women', 'womens', 'ladies', 'dress', 'top', 'kurti', 'kurta', 'saree', 'sari', 'jeans', 'trouser', 'handbag', 'shoes', 'heels', 'watch', 'jewellery', 'necklace', 'earrings', 'jhumka', 'sunglasses', 'biba', 'libas', 'vero moda', 'only', 'giva', 'zaveri'],
+    'Electronics': ['electronics', 'smartphone', 'phone', 'mobile', 'laptop', 'headphones', 'earbuds', 'tws', 'smartwatch', 'tablet', 'speaker', 'power bank', 'charger', 'camera', 'oneplus', 'samsung', 'sony', 'boat', 'noise', 'jbl', 'asus', 'lenovo', 'realme'],
+    'Home & Kitchen': ['home', 'kitchen', 'furniture', 'bedsheet', 'curtains', 'cookware', 'tawa', 'cooker', 'mixer', 'grinder', 'induction', 'storage', 'bottle', 'decor', 'lighting', 'lamp', 'philips', 'prestige', 'hawkins', 'bombay dyeing', 'milton', 'cello', 'wipro'],
+    'Beauty & Personal Care': ['beauty', 'skincare', 'makeup', 'lipstick', 'serum', 'sunscreen', 'perfume', 'fragrance', 'hair', 'haircare', 'shampoo', 'trimmer', 'grooming', 'shaving', 'minimalist', 'maybelline', 'lakme', 'bella vita', 'derma', 'forest essentials'],
+    'Sports & Fitness': ['sports', 'fitness', 'shoes', 'running', 'tshirt', 'track pant', 'joggers', 'gym', 'dumbbell', 'weights', 'resistance bands', 'yoga', 'cricket', 'bat', 'football', 'puma', 'decathlon', 'nivia', 'boldfit', 'sg', 'asics', 'cultsport'],
+    'Kids': ['kids', 'child', 'children', 'boys', 'girls', 'frock', 'shoes', 'toys', 'lego', 'hot wheels', 'barbie', 'school', 'backpack', 'pens', 'skybags', 'hopscotch', 'max']
   };
 
   // 4. Score each product
   const scored = allProducts.map(p => {
     let score = 0;
     const nameLower = p.name.toLowerCase();
+    const brandLower = (p.brand || '').toLowerCase();
     const descLower = p.description.toLowerCase();
     const catLower = p.category.toLowerCase();
     const subCatLower = (p.sub_category || '').toLowerCase();
@@ -45,15 +47,16 @@ function localSmartRecommendation(userMessage, allProducts) {
     // Price constraint check
     if (maxPrice !== null) {
       if (p.price <= maxPrice) {
-        score += 35; // Strong bonus for fitting within requested budget
+        score += 40; // Strong bonus for fitting within requested budget
       } else {
-        score -= 60; // Penalty for exceeding budget
+        score -= 70; // Penalty for exceeding budget
       }
     }
 
     // Direct token matches
     cleanTokens.forEach(token => {
       if (nameLower.includes(token)) score += 30;
+      if (brandLower.includes(token)) score += 35;
       if (subCatLower.includes(token)) score += 25;
       if (descLower.includes(token)) score += 12;
       if (catLower.includes(token)) score += 15;

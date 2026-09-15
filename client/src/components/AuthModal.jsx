@@ -54,7 +54,7 @@ export default function AuthModal({ isOpen, onClose }) {
               {isRegister ? 'Create Your Account' : 'Welcome Back'}
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              {isRegister ? 'Join AuraMart for personalized AI shopping' : 'Sign in to access your orders and saved cart'}
+              {isRegister ? 'Join BUYNEST for personalized AI shopping' : 'Sign in to access your orders and saved cart'}
             </p>
           </div>
           <button

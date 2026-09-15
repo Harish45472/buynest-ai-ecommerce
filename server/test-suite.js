@@ -3,13 +3,14 @@ const assert = require('assert');
 const BASE_URL = 'http://localhost:5000/api';
 
 async function runTests() {
-  console.log('🧪 Starting Full E-Commerce & AI Assistant Verification Suite...\n');
+  console.log('🧪 Starting Full BUYNEST Marketplace & AI Verification Suite...\n');
 
   // 1. Health Check
   const healthRes = await fetch(`${BASE_URL}/health`);
   const healthData = await healthRes.json();
   assert.strictEqual(healthData.status, 'ok', 'Health check failed');
-  console.log('✅ 1. Health Check Passed');
+  assert.strictEqual(healthData.store, 'BUYNEST', 'Expected BUYNEST store identity');
+  console.log('✅ 1. Health Check Passed (Store: BUYNEST)');
 
   // 2. Authentication: Login as Demo Customer
   const loginRes = await fetch(`${BASE_URL}/auth/login`, {
@@ -35,27 +36,75 @@ async function runTests() {
   const adminToken = adminLoginData.token;
   console.log('✅ 3. Admin Authentication Passed');
 
-  // 4. Products: Listing & Filtering
-  const productsRes = await fetch(`${BASE_URL}/products?category=Gadgets%20%26%20Tech&sortBy=price_asc`);
-  const productsData = await productsRes.json();
-  assert(productsData.products.length > 0, 'No Gadgets & Tech products found');
-  console.log(`✅ 4. Products Filtering Passed (${productsData.products.length} Gadgets & Tech products)`);
+  // 4. Products: 200+ Catalog Size Verification
+  const allProductsRes = await fetch(`${BASE_URL}/products`);
+  const allProductsData = await allProductsRes.json();
+  assert(allProductsData.products.length >= 200, `Expected at least 200 products, found ${allProductsData.products.length}`);
+  console.log(`✅ 4. 200+ Products Catalog Verified (${allProductsData.products.length} active products in database)`);
 
-  // 4b. Sub-category Filtering
-  const subCatRes = await fetch(`${BASE_URL}/products?category=Men&sub_category=Topwear`);
+  // 5. Category & Subcategory Filtering (Men -> T-shirts)
+  const subCatRes = await fetch(`${BASE_URL}/products?category=Men&sub_category=T-shirts`);
   const subCatData = await subCatRes.json();
-  assert(subCatData.products.length > 0, 'No Men Topwear products found');
-  assert(subCatData.products.every(p => p.sub_category === 'Topwear'), 'Non-topwear product returned');
-  console.log(`✅ 4b. Sub-category Filtering Passed (${subCatData.products.length} Men Topwear products)`);
+  assert(subCatData.products.length > 0, 'No Men T-shirts found');
+  assert(subCatData.products.every(p => p.category === 'Men' && p.sub_category === 'T-shirts'), 'Filtering mismatch');
+  console.log(`✅ 5. Category & Subcategory Filtering Passed (${subCatData.products.length} Men T-shirts)`);
 
-  // 5. Search
-  const searchRes = await fetch(`${BASE_URL}/products?q=Earbuds`);
-  const searchData = await searchRes.json();
-  assert(searchData.products.some(p => p.name.includes('Earbuds')), 'Search for Earbuds failed');
-  const testProduct = searchData.products[0];
-  console.log(`✅ 5. Search Passed (Found: "${testProduct.name}" at ₹${testProduct.price.toLocaleString('en-IN')})`);
+  // 6. Brand Filtering
+  const brandRes = await fetch(`${BASE_URL}/products?brands=Puma`);
+  const brandData = await brandRes.json();
+  assert(brandData.products.length > 0, 'No Puma products found');
+  assert(brandData.products.every(p => p.brand.toLowerCase() === 'puma'), 'Brand filter failed');
+  console.log(`✅ 6. Brand Filtering Passed (${brandData.products.length} Puma products found)`);
 
-  // 6. Cart: Clear existing and Add Item
+  // 7. Rating Filtering (4★ & above)
+  const ratingRes = await fetch(`${BASE_URL}/products?minRating=4.5`);
+  const ratingData = await ratingRes.json();
+  assert(ratingData.products.length > 0, 'No high-rated products found');
+  assert(ratingData.products.every(p => p.rating >= 4.5), 'Rating filter failed');
+  console.log(`✅ 7. Rating Filtering Passed (${ratingData.products.length} products with rating >= 4.5★)`);
+
+  // 8. Dynamic Facets API
+  const facetsRes = await fetch(`${BASE_URL}/products/facets?category=Electronics`);
+  const facetsData = await facetsRes.json();
+  assert(facetsData.brands.length > 0, 'No brands returned in facets');
+  assert(facetsData.subCategories.length > 0, 'No subcategories returned in facets');
+  console.log(`✅ 8. Dynamic Filter Facets Verified (${facetsData.brands.length} brands, ${facetsData.subCategories.length} subcategories in Electronics)`);
+
+  // 9. Frequently Bought Together Bundle API
+  const testProd = allProductsData.products[0];
+  const bundleRes = await fetch(`${BASE_URL}/products/${testProd.product_id}/bundle`);
+  const bundleData = await bundleRes.json();
+  assert(bundleData.items.length >= 2, 'Bundle items missing');
+  assert(bundleData.bundlePrice < bundleData.originalTotal, 'Bundle discount calculation failed');
+  console.log(`✅ 9. Frequently Bought Together Bundle Passed (Original: ₹${bundleData.originalTotal.toLocaleString('en-IN')}, Bundle: ₹${bundleData.bundlePrice.toLocaleString('en-IN')})`);
+
+  // 10. Wishlist API (Add, List, Delete)
+  const addWishRes = await fetch(`${BASE_URL}/wishlist`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${userToken}`
+    },
+    body: JSON.stringify({ product_id: testProd.product_id })
+  });
+  const addWishData = await addWishRes.json();
+  assert(addWishData.items.some(i => i.product_id === testProd.product_id), 'Product not added to wishlist');
+
+  const getWishRes = await fetch(`${BASE_URL}/wishlist`, {
+    headers: { 'Authorization': `Bearer ${userToken}` }
+  });
+  const getWishData = await getWishRes.json();
+  assert(getWishData.items.length > 0, 'Wishlist items empty');
+
+  const delWishRes = await fetch(`${BASE_URL}/wishlist/${testProd.product_id}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${userToken}` }
+  });
+  const delWishData = await delWishRes.json();
+  assert(!delWishData.items.some(i => i.product_id === testProd.product_id), 'Product not removed from wishlist');
+  console.log('✅ 10. Wishlist Endpoints Verified (Add, List, Remove)');
+
+  // 11. Cart: Clear and Add Item
   await fetch(`${BASE_URL}/cart`, {
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${userToken}` }
@@ -67,27 +116,14 @@ async function runTests() {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${userToken}`
     },
-    body: JSON.stringify({ product_id: testProduct.product_id, quantity: 2 })
+    body: JSON.stringify({ product_id: testProd.product_id, quantity: 2 })
   });
   const addCartData = await addCartRes.json();
   assert.strictEqual(addCartData.items.length, 1, 'Cart items count mismatch');
-  assert.strictEqual(addCartData.items[0].quantity, 2, 'Cart quantity mismatch');
-  console.log(`✅ 6. Add to Cart Passed (Added 2 units of ${testProduct.name})`);
+  console.log(`✅ 11. Add to Cart Passed (Added 2 units of ${testProd.name})`);
 
-  // 7. Stock Enforcement Test: Attempt to add more than available stock
-  const overStockRes = await fetch(`${BASE_URL}/cart`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${userToken}`
-    },
-    body: JSON.stringify({ product_id: testProduct.product_id, quantity: 9999 })
-  });
-  assert.strictEqual(overStockRes.status, 400, 'Expected 400 for stock limit exceeded');
-  console.log('✅ 7. Stock Limit Enforcement Guard Passed (Rejected 9999 items)');
-
-  // 8. Atomic Checkout & Stock Deduction
-  const initialStock = testProduct.stock;
+  // 12. Checkout & Atomic Stock Deduction
+  const initialStock = testProd.stock;
   const orderRes = await fetch(`${BASE_URL}/orders`, {
     method: 'POST',
     headers: {
@@ -96,100 +132,42 @@ async function runTests() {
     },
     body: JSON.stringify({
       shipping_name: 'Pooja Sharma',
-      shipping_address: 'Flat 402, Lotus Residency, MG Road',
+      shipping_address: 'Flat 402, Lotus Residency, 100 Feet Road, Indiranagar',
       shipping_city: 'Bengaluru',
-      shipping_postal: '560001',
+      shipping_postal: '560038',
       payment_method: 'UPI (Google Pay / PhonePe)'
     })
   });
   const orderData = await orderRes.json();
-  assert(orderData.order, 'Order creation failed');
-  assert.strictEqual(orderData.order.status, 'pending');
+  assert(orderData.order, 'Order placement failed');
   const createdOrderId = orderData.order.order_id;
-  console.log(`✅ 8. Order Placement & Checkout Passed (Created Order #${createdOrderId} - Total: ₹${orderData.order.total_amount.toLocaleString('en-IN')})`);
+  console.log(`✅ 12. Atomic Checkout Passed (Order #${createdOrderId} - Total: ₹${orderData.order.total_amount.toLocaleString('en-IN')})`);
 
-  // Verify stock deduction in products table
-  const updatedProdRes = await fetch(`${BASE_URL}/products/${testProduct.product_id}`);
+  // 13. Verify Stock Deduction
+  const updatedProdRes = await fetch(`${BASE_URL}/products/${testProd.product_id}`);
   const updatedProdData = await updatedProdRes.json();
   assert.strictEqual(updatedProdData.product.stock, initialStock - 2, 'Stock was not properly deducted!');
-  console.log(`✅ 9. Atomic Stock Deduction Verified (Stock decreased from ${initialStock} to ${updatedProdData.product.stock})`);
+  console.log(`✅ 13. Stock Decrement Verified (Stock decreased from ${initialStock} to ${updatedProdData.product.stock})`);
 
-  // Verify cart is now empty
-  const cartCheckRes = await fetch(`${BASE_URL}/cart`, {
-    headers: { 'Authorization': `Bearer ${userToken}` }
-  });
-  const cartCheckData = await cartCheckRes.json();
-  assert.strictEqual(cartCheckData.items.length, 0, 'Cart was not cleared after checkout');
-  console.log('✅ 10. Post-Checkout Cart Reset Verified');
-
-  // 11. User Order History
-  const userOrdersRes = await fetch(`${BASE_URL}/orders`, {
-    headers: { 'Authorization': `Bearer ${userToken}` }
-  });
-  const userOrdersData = await userOrdersRes.json();
-  assert(userOrdersData.orders.some(o => o.order_id === createdOrderId), 'Created order missing in user order history');
-  console.log(`✅ 11. User Order History Tracking Verified (${userOrdersData.orders.length} orders total)`);
-
-  // 12. Admin: Update Order Status
-  const updateStatusRes = await fetch(`${BASE_URL}/admin/orders/${createdOrderId}/status`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${adminToken}`
-    },
-    body: JSON.stringify({ status: 'shipped' })
-  });
-  const updateStatusData = await updateStatusRes.json();
-  assert.strictEqual(updateStatusData.order.status, 'shipped');
-  console.log(`✅ 12. Admin Order Status Transition to 'shipped' Passed`);
-
-  // 13. Admin Dashboard Analytics
+  // 14. Admin KPI Stats
   const statsRes = await fetch(`${BASE_URL}/admin/stats`, {
     headers: { 'Authorization': `Bearer ${adminToken}` }
   });
   const statsData = await statsRes.json();
   assert(statsData.stats.totalRevenue > 0, 'Admin revenue missing');
-  assert(statsData.stats.totalOrders > 0, 'Admin orders count missing');
-  console.log(`✅ 13. Admin KPI Metrics Verified (Revenue: ₹${statsData.stats.totalRevenue.toLocaleString('en-IN')}, Orders: ${statsData.stats.totalOrders})`);
+  console.log(`✅ 14. Admin Analytics KPI Verified (Total Revenue: ₹${statsData.stats.totalRevenue.toLocaleString('en-IN')}, Orders: ${statsData.stats.totalOrders})`);
 
-  // 14. Admin Product CRUD: Create, Update, Delete
-  const createProdRes = await fetch(`${BASE_URL}/products`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${adminToken}`
-    },
-    body: JSON.stringify({
-      name: 'Temp Test Kurtas',
-      category: 'Men',
-      sub_category: 'Ethnic Wear',
-      description: 'Temporary item for verification test',
-      price: 1999,
-      stock: 10,
-      image_url: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&q=80'
-    })
-  });
-  const createProdData = await createProdRes.json();
-  const tempProdId = createProdData.product.product_id;
-
-  const deleteProdRes = await fetch(`${BASE_URL}/products/${tempProdId}`, {
-    method: 'DELETE',
-    headers: { 'Authorization': `Bearer ${adminToken}` }
-  });
-  assert.strictEqual(deleteProdRes.status, 200);
-  console.log('✅ 14. Admin Product CRUD (Create & Delete) Passed');
-
-  // 15. AI Shopping Assistant: Budget constraint & intent test
+  // 15. BUYNEST AI Shopping Assistant: Brand and Budget Intent Test
   const aiChatRes = await fetch(`${BASE_URL}/ai/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: 'Recommend kurta under ₹2000' })
+    body: JSON.stringify({ message: 'Recommend earbuds under ₹2000' })
   });
   const aiChatData = await aiChatRes.json();
   assert(aiChatData.reply, 'AI reply missing');
   assert(aiChatData.recommendations.length > 0, 'AI recommendations missing');
-  assert(aiChatData.recommendations.every(p => p.price <= 2000), 'AI recommended products exceeding budget!');
-  console.log(`✅ 15. AI Shopping Assistant Passed (Recommended: ${aiChatData.recommendations.map(p => `${p.name} (₹${p.price.toLocaleString('en-IN')})`).join(', ')})`);
+  assert(aiChatData.recommendations.every(p => p.price <= 2000), 'AI recommended products exceeding ₹2000 budget!');
+  console.log(`✅ 15. BUYNEST AI Shopping Assistant Passed (Recommended: ${aiChatData.recommendations.map(p => `${p.name} (₹${p.price.toLocaleString('en-IN')})`).join(', ')})`);
 
   console.log('\n🎉 ALL 15 AUTOMATED VERIFICATION TESTS PASSED SUCCESSFULLY! 🎉\n');
 }

@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { WishlistProvider } from './context/WishlistContext';
 import Navbar from './components/Navbar';
 import CartDrawer from './components/CartDrawer';
+import WishlistDrawer from './components/WishlistDrawer';
 import ProductDetailModal from './components/ProductDetailModal';
 import AiAssistant from './components/AiAssistant';
 import AuthModal from './components/AuthModal';
@@ -22,6 +24,7 @@ function MainLayout() {
   const [selectedSubCategory, setSelectedSubCategory] = useState('all');
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isAiOpen, setIsAiOpen] = useState(false);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [highlightOrderId, setHighlightOrderId] = useState(null);
 
@@ -50,6 +53,7 @@ function MainLayout() {
         selectedSubCategory={selectedSubCategory}
         setSelectedSubCategory={setSelectedSubCategory}
         onOpenAiAssistant={() => setIsAiOpen(true)}
+        onOpenWishlist={() => setIsWishlistOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
         activeView={activeView}
         setActiveView={setActiveView}
@@ -59,6 +63,13 @@ function MainLayout() {
       <CartDrawer
         onProceedToCheckout={() => setActiveView('checkout')}
         onOpenAuth={() => setIsAuthOpen(true)}
+      />
+
+      {/* Slide-out Wishlist Drawer */}
+      <WishlistDrawer
+        isOpen={isWishlistOpen}
+        onClose={() => setIsWishlistOpen(false)}
+        onSelectProduct={(p) => setSelectedProduct(p)}
       />
 
       {/* Product Detail Modal */}
@@ -137,10 +148,10 @@ function MainLayout() {
       <footer className="bg-slate-900 text-slate-400 text-xs py-10 border-t border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-white text-sm">AuraMart</span>
-            <span>• Next-Gen AI Shopping Assistant Platform</span>
+            <span className="font-bold text-white text-sm">BUYNEST</span>
+            <span>• India's AI-Powered Smart Lifestyle Marketplace</span>
           </div>
-          <p>© 2026 AuraMart Inc. All rights reserved. Stock validated atomically with SQLite & React.</p>
+          <p>© 2026 BUYNEST India Ltd. All rights reserved. 200+ Products across 7 Core Categories.</p>
         </div>
       </footer>
     </div>
@@ -151,7 +162,9 @@ export default function App() {
   return (
     <AuthProvider>
       <CartProvider>
-        <MainLayout />
+        <WishlistProvider>
+          <MainLayout />
+        </WishlistProvider>
       </CartProvider>
     </AuthProvider>
   );

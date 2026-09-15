@@ -1,33 +1,22 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Sparkles, Search, User, LogOut, ShieldCheck, ClipboardList, Menu, X, ChevronDown } from 'lucide-react';
+import { ShoppingBag, Sparkles, Search, User, LogOut, ShieldCheck, ClipboardList, Menu, X, ChevronDown, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 
-// Mega Menu Department & Subcategory Structure inspired by Myntra
+// Mega Menu Department & Subcategory Structure for BUYNEST
 export const MEGA_MENU_DATA = {
   'Men': {
     accent: 'text-rose-600',
     border: 'border-b-2 border-rose-500',
     columns: [
       {
-        title: 'Topwear',
-        items: ['All Topwear', 'Casual Shirts', 'Formal Shirts', 'T-Shirts', 'Jackets']
+        title: 'Apparel',
+        items: ['All Men', 'T-shirts', 'Shirts', 'Jeans', 'Trousers', 'Jackets']
       },
       {
-        title: 'Indian & Festive Wear',
-        items: ['All Indian Wear', 'Kurtas & Kurta Sets', 'Nehru Jackets']
-      },
-      {
-        title: 'Bottomwear',
-        items: ['All Bottomwear', 'Jeans', 'Casual Trousers', 'Joggers']
-      },
-      {
-        title: 'Footwear',
-        items: ['All Footwear', 'Sneakers', 'Casual Shoes', 'Formal Shoes']
-      },
-      {
-        title: 'Fashion Accessories',
-        items: ['Watches', 'Wallets', 'Belts', 'Sunglasses']
+        title: 'Footwear & Accessories',
+        items: ['Shoes', 'Watches', 'Wallets', 'Bags', 'Sunglasses']
       }
     ]
   },
@@ -36,20 +25,72 @@ export const MEGA_MENU_DATA = {
     border: 'border-b-2 border-pink-500',
     columns: [
       {
-        title: 'Ethnic & Fusion Wear',
-        items: ['All Ethnic Wear', 'Kurtas & Suits', 'Sarees', 'Anarkali Suits']
+        title: 'Clothing',
+        items: ['All Women', 'Dresses', 'Tops', 'Kurtis', 'Sarees', 'Jeans', 'Trousers']
       },
       {
-        title: 'Western Wear',
-        items: ['All Western Wear', 'Dresses & Maxis', 'Tops & Tunics', 'Jeggings & Jeans']
+        title: 'Footwear & Accessories',
+        items: ['Handbags', 'Shoes', 'Watches', 'Jewellery', 'Sunglasses']
+      }
+    ]
+  },
+  'Electronics': {
+    accent: 'text-blue-600',
+    border: 'border-b-2 border-blue-500',
+    columns: [
+      {
+        title: 'Devices & Computing',
+        items: ['All Electronics', 'Smartphones', 'Laptops', 'Tablets', 'Cameras']
       },
       {
-        title: 'Footwear',
-        items: ['All Footwear', 'Block Heels', 'Comfort Flats', 'Casual Sneakers']
+        title: 'Audio & Wearables',
+        items: ['Headphones', 'Earbuds', 'Smartwatches', 'Speakers']
       },
       {
-        title: 'Bags & Accessories',
-        items: ['Handbags & Totes', 'Wallets & Clutches', 'Jewellery']
+        title: 'Power & Accessories',
+        items: ['Power banks', 'Chargers']
+      }
+    ]
+  },
+  'Home & Kitchen': {
+    accent: 'text-amber-600',
+    border: 'border-b-2 border-amber-500',
+    columns: [
+      {
+        title: 'Living & Decor',
+        items: ['All Home & Kitchen', 'Furniture', 'Home decor', 'Lighting', 'Curtains', 'Bedsheets']
+      },
+      {
+        title: 'Kitchen & Appliances',
+        items: ['Kitchen appliances', 'Cookware', 'Storage products']
+      }
+    ]
+  },
+  'Beauty & Personal Care': {
+    accent: 'text-teal-600',
+    border: 'border-b-2 border-teal-500',
+    columns: [
+      {
+        title: 'Skincare & Makeup',
+        items: ['All Beauty & Personal Care', 'Skincare', 'Makeup']
+      },
+      {
+        title: 'Grooming & Fragrance',
+        items: ['Perfumes', 'Hair care', 'Grooming products']
+      }
+    ]
+  },
+  'Sports & Fitness': {
+    accent: 'text-emerald-600',
+    border: 'border-b-2 border-emerald-500',
+    columns: [
+      {
+        title: 'Activewear & Shoes',
+        items: ['All Sports & Fitness', 'Sports shoes', 'T-shirts', 'Track pants']
+      },
+      {
+        title: 'Equipment & Sports',
+        items: ['Gym equipment', 'Fitness accessories', 'Cricket products', 'Football products']
       }
     ]
   },
@@ -58,74 +99,12 @@ export const MEGA_MENU_DATA = {
     border: 'border-b-2 border-orange-500',
     columns: [
       {
-        title: 'Boys Clothing',
-        items: ['Graphic T-Shirts', 'Denim Shorts', 'Hoodies']
+        title: 'Clothing & Footwear',
+        items: ['All Kids', 'Boys clothing', 'Girls clothing', 'Kids shoes']
       },
       {
-        title: 'Girls Clothing',
-        items: ['Floral Frocks', 'Party Dresses', 'Leggings']
-      },
-      {
-        title: 'Footwear & Toys',
-        items: ['LED Light-Up Sneakers', 'Sandals', 'Essentials']
-      }
-    ]
-  },
-  'Home & Living': {
-    accent: 'text-amber-600',
-    border: 'border-b-2 border-amber-500',
-    columns: [
-      {
-        title: 'Kitchen & Dining',
-        items: ['Ceramic Dinner Sets', 'Pour-Over Coffee Brewers', 'Insulated Flasks']
-      },
-      {
-        title: 'Home Decor & Fragrance',
-        items: ['Aroma Diffusers', 'Ambient Lamps', 'Wall Art']
-      },
-      {
-        title: 'Bedding & Furnishing',
-        items: ['Egyptian Cotton Bedsheets', 'Cushions & Throws']
-      },
-      {
-        title: 'Sports & Active',
-        items: ['Natural Cork Yoga Mats', 'Fitness Flasks']
-      }
-    ]
-  },
-  'Beauty & Grooming': {
-    accent: 'text-teal-600',
-    border: 'border-b-2 border-teal-500',
-    columns: [
-      {
-        title: 'Skincare',
-        items: ['Vitamin C Glow Serums', 'Hyaluronic Sunscreens SPF 50', 'Moisturizers']
-      },
-      {
-        title: 'Fragrances',
-        items: ['Luxury Eau De Parfum', 'Bergamot Fragrances', 'Body Mists']
-      },
-      {
-        title: 'Grooming Tools',
-        items: ['Beard & Body Trimmers', 'Hair Styling Tools']
-      }
-    ]
-  },
-  'Gadgets & Tech': {
-    accent: 'text-indigo-600',
-    border: 'border-b-2 border-indigo-500',
-    columns: [
-      {
-        title: 'Smart Wearables',
-        items: ['AMOLED Smartwatches', 'Fitness Trackers']
-      },
-      {
-        title: 'Audio & Headphones',
-        items: ['Active Noise Cancelling (ANC)', 'True Wireless Earbuds (TWS)', 'Bluetooth Speakers']
-      },
-      {
-        title: 'Computers & Laptops',
-        items: ['Thin & Light Laptops', 'Tech Accessories']
+        title: 'Toys & School',
+        items: ['Toys', 'School accessories']
       }
     ]
   }
@@ -139,12 +118,14 @@ export default function Navbar({
   selectedSubCategory,
   setSelectedSubCategory,
   onOpenAiAssistant,
+  onOpenWishlist,
   onOpenAuth,
   activeView,
   setActiveView
 }) {
   const { user, isAdmin, logout } = useAuth();
   const { totalItems, openCart } = useCart();
+  const { wishlistCount } = useWishlist();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeMegaCategory, setActiveMegaCategory] = useState(null);
@@ -169,13 +150,13 @@ export default function Navbar({
 
   return (
     <header className="sticky top-0 z-40 bg-white shadow-xs border-b border-slate-200">
-      {/* Top Utility Announcement Bar */}
+      {/* Top Announcement Bar */}
       <div className="bg-slate-950 text-slate-300 text-[11px] py-1.5 px-4 text-center font-semibold tracking-wide flex items-center justify-center gap-2">
-        <span>🇮🇳 <strong>FESTIVE SALE LIVE</strong>: Free Express Delivery on orders above ₹999 + Instant AI Shopping Guide</span>
+        <span>🇮🇳 <strong>BUYNEST MEGA DEALS</strong>: Free Express Delivery on orders above ₹999 + Instant AI Personal Shopper</span>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-18 gap-3 sm:gap-6">
+        <div className="flex items-center justify-between h-18 gap-2 sm:gap-4">
           {/* Logo */}
           <button
             onClick={() => {
@@ -185,21 +166,21 @@ export default function Navbar({
             }}
             className="flex items-center gap-2 group shrink-0"
           >
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-              <Sparkles className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
+              <ShoppingBag className="w-5 h-5" />
             </div>
             <div className="text-left">
               <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
-                Aura<span className="text-emerald-600">Mart</span>
+                BUY<span className="text-emerald-600">NEST</span>
               </span>
               <span className="hidden sm:block text-[9px] font-black text-emerald-600 uppercase tracking-widest -mt-1">
-                AI Smart E-Commerce
+                AI Smart Marketplace
               </span>
             </div>
           </button>
 
-          {/* Desktop Mega-Menu Nav Links (Myntra-style) */}
-          <nav className="hidden lg:flex items-center gap-1 xl:gap-2 h-full">
+          {/* Desktop Mega-Menu Nav Links */}
+          <nav className="hidden xl:flex items-center gap-1 h-full">
             {Object.keys(MEGA_MENU_DATA).map((catName) => {
               const isActive = selectedCategory === catName;
               const isHovered = activeMegaCategory === catName;
@@ -211,7 +192,7 @@ export default function Navbar({
                 >
                   <button
                     onClick={() => handleMainCategoryClick(catName)}
-                    className={`h-full px-3 text-xs font-black uppercase tracking-wider transition-colors flex items-center gap-1 ${
+                    className={`h-full px-2.5 text-[11px] font-black uppercase tracking-wider transition-colors flex items-center gap-0.5 ${
                       isActive || isHovered
                         ? `${MEGA_MENU_DATA[catName].accent} border-b-2 border-current font-extrabold`
                         : 'text-slate-700 hover:text-slate-950'
@@ -224,21 +205,24 @@ export default function Navbar({
             })}
           </nav>
 
-          {/* Search Bar */}
-          <div className="flex-1 max-w-md hidden md:block">
+          {/* Live Search Bar */}
+          <div className="flex-1 max-w-xs md:max-w-md relative hidden md:block">
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search for products, brands, and more..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-slate-100/90 border-none rounded-full text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:bg-white transition shadow-inner"
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  if (activeView !== 'home') setActiveView('home');
+                }}
+                placeholder="Search products, brands (boAt, Puma, Levis), categories..."
+                className="w-full pl-9 pr-4 py-2 text-xs bg-slate-100 hover:bg-slate-200/70 focus:bg-white border border-transparent focus:border-slate-300 rounded-full focus:outline-none transition-all shadow-inner"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600 font-bold"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
                 >
                   ✕
                 </button>
@@ -246,49 +230,58 @@ export default function Navbar({
             </div>
           </div>
 
-          {/* Right Action Icons */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            {/* AI Assistant Quick Trigger with badge */}
+          {/* Action Icons */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
+            {/* AI Assistant Quick Trigger */}
             <button
               onClick={onOpenAiAssistant}
-              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xs shadow-md shadow-emerald-600/25 hover:shadow-lg transition-all hover:scale-105 active:scale-95 group"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xs shadow-md shadow-emerald-600/25 hover:shadow-lg transition-all hover:scale-105 active:scale-95 group"
             >
               <Sparkles className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
-              <span className="hidden sm:inline">Ask AI Assistant</span>
-              <span className="sm:hidden">AI</span>
+              <span className="hidden sm:inline">Ask AI</span>
+            </button>
+
+            {/* Wishlist Button */}
+            <button
+              onClick={onOpenWishlist}
+              className="relative p-2.5 text-slate-700 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition"
+              title="My Wishlist"
+            >
+              <Heart className={`w-5 h-5 ${wishlistCount > 0 ? 'text-rose-500 fill-current' : ''}`} />
+              {wishlistCount > 0 && (
+                <span className="absolute top-0.5 right-0.5 bg-rose-500 text-white font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center shadow-sm">
+                  {wishlistCount}
+                </span>
+              )}
             </button>
 
             {/* Shopping Cart Button */}
             <button
               onClick={openCart}
-              className="relative p-2.5 text-slate-700 hover:text-emerald-600 hover:bg-slate-100 rounded-2xl transition"
+              className="relative p-2.5 text-slate-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-2xl transition"
               title="Shopping Cart"
             >
               <ShoppingBag className="w-5 h-5" />
               {totalItems > 0 && (
-                <span className="absolute 1 top-0.5 right-0.5 bg-emerald-600 text-white font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center shadow-sm">
+                <span className="absolute top-0.5 right-0.5 bg-emerald-600 text-white font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center shadow-sm">
                   {totalItems}
                 </span>
               )}
             </button>
 
-            {/* User Account / Navigation */}
+            {/* User Account */}
             {user ? (
               <div className="relative">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center gap-2 p-1.5 rounded-2xl hover:bg-slate-100 transition text-sm font-medium text-slate-700"
+                  className="flex items-center gap-1.5 p-1.5 rounded-2xl hover:bg-slate-100 transition text-sm font-medium text-slate-700"
                 >
                   <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
-                  <span className="hidden xl:inline text-xs font-bold max-w-[90px] truncate">
-                    {user.name.split(' ')[0]}
-                  </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden xl:block" />
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
                 </button>
 
-                {/* User Dropdown */}
                 {showUserMenu && (
                   <div
                     className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-50 animate-fade-in"
@@ -335,103 +328,124 @@ export default function Navbar({
             ) : (
               <button
                 onClick={onOpenAuth}
-                className="px-4 py-2 text-xs font-black text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-full transition shadow-xs"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 transition shadow-sm"
               >
-                Sign In
+                <User className="w-3.5 h-3.5" />
+                <span>Sign In</span>
               </button>
             )}
 
-            {/* Mobile menu trigger */}
+            {/* Mobile Hamburger Toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl"
+              className="p-2 text-slate-700 hover:bg-slate-100 rounded-xl xl:hidden"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
-
-        {/* Mobile Search Bar */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden py-3 border-t border-slate-100 animate-fade-in space-y-3">
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-slate-100 rounded-xl text-xs text-slate-800 focus:outline-none"
-              />
-            </div>
-            {/* Mobile categories accordion */}
-            <div className="grid grid-cols-2 gap-2 pt-1">
-              {Object.keys(MEGA_MENU_DATA).map(catName => (
-                <button
-                  key={catName}
-                  onClick={() => {
-                    handleMainCategoryClick(catName);
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`p-2.5 rounded-xl text-left text-xs font-bold border transition ${
-                    selectedCategory === catName
-                      ? 'border-emerald-500 bg-emerald-50/50 text-emerald-700'
-                      : 'border-slate-200 text-slate-700'
-                  }`}
-                >
-                  {catName}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Interactive Desktop Mega Menu Panel (Myntra-style Multi-column Drawer) */}
+      {/* Desktop Mega-Menu Hover Dropdown Box */}
       {activeMegaCategory && MEGA_MENU_DATA[activeMegaCategory] && (
         <div
           onMouseEnter={() => setActiveMegaCategory(activeMegaCategory)}
           onMouseLeave={() => setActiveMegaCategory(null)}
-          className="hidden lg:block absolute left-0 right-0 top-full bg-white border-b border-slate-200 shadow-2xl z-50 animate-fade-in"
+          className="hidden xl:block absolute left-0 right-0 bg-white shadow-2xl border-b border-slate-200 py-6 px-8 z-50 animate-fade-in"
         >
-          <div className="max-w-7xl mx-auto px-8 py-8">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-6">
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-black uppercase tracking-widest ${MEGA_MENU_DATA[activeMegaCategory].accent}`}>
-                  {activeMegaCategory} Department
-                </span>
-                <span className="text-slate-300">•</span>
-                <span className="text-xs text-slate-400 font-medium">Click any subcategory to browse</span>
-              </div>
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+              <span className={`text-sm font-black uppercase tracking-wider ${MEGA_MENU_DATA[activeMegaCategory].accent}`}>
+                Explore {activeMegaCategory}
+              </span>
               <button
                 onClick={() => handleMainCategoryClick(activeMegaCategory)}
-                className="text-xs font-bold text-slate-700 hover:text-emerald-600 underline"
+                className="text-xs font-bold text-slate-500 hover:text-slate-900 underline"
               >
-                View All {activeMegaCategory} Items &rarr;
+                View Entire Collection →
               </button>
             </div>
-
-            <div className="grid grid-cols-5 gap-8">
+            <div className="grid grid-cols-3 gap-8">
               {MEGA_MENU_DATA[activeMegaCategory].columns.map((col, idx) => (
                 <div key={idx} className="space-y-3">
-                  <h4 className={`text-xs font-black uppercase tracking-wider border-b border-slate-100 pb-1.5 ${MEGA_MENU_DATA[activeMegaCategory].accent}`}>
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 border-b border-slate-100 pb-1.5">
                     {col.title}
                   </h4>
                   <ul className="space-y-2">
-                    {col.items.map((item, itemIdx) => (
-                      <li key={itemIdx}>
-                        <button
-                          onClick={() => handleSubCategoryClick(activeMegaCategory, item)}
-                          className="text-xs text-slate-600 hover:text-slate-950 hover:font-bold transition-all text-left w-full hover:translate-x-1"
-                        >
-                          {item}
-                        </button>
-                      </li>
-                    ))}
+                    {col.items.map((item, itemIdx) => {
+                      const isCurrent = selectedSubCategory === item || (item.startsWith('All ') && selectedSubCategory === 'all' && selectedCategory === activeMegaCategory);
+                      return (
+                        <li key={itemIdx}>
+                          <button
+                            onClick={() => handleSubCategoryClick(activeMegaCategory, item)}
+                            className={`text-xs block text-left transition-colors ${
+                              isCurrent
+                                ? 'font-black text-emerald-600'
+                                : 'text-slate-600 hover:text-slate-900 font-medium'
+                            }`}
+                          >
+                            {item}
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Drawer Menu */}
+      {mobileMenuOpen && (
+        <div className="xl:hidden bg-white border-b border-slate-200 px-4 py-4 space-y-4 max-h-[80vh] overflow-y-auto">
+          <div className="relative mb-2">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                if (activeView !== 'home') setActiveView('home');
+              }}
+              placeholder="Search products or brands..."
+              className="w-full pl-9 pr-3 py-2 text-xs bg-slate-100 rounded-xl focus:outline-none"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+              Departments
+            </span>
+            {Object.keys(MEGA_MENU_DATA).map((catName) => (
+              <div key={catName} className="border-b border-slate-100 pb-2">
+                <button
+                  onClick={() => {
+                    handleMainCategoryClick(catName);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full text-left py-1 text-xs font-black uppercase tracking-wide flex justify-between items-center text-slate-800"
+                >
+                  <span>{catName}</span>
+                  <span className="text-[10px] text-slate-400">View All</span>
+                </button>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {MEGA_MENU_DATA[catName].columns.flatMap(c => c.items.filter(i => !i.startsWith('All '))).map((subItem, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        handleSubCategoryClick(catName, subItem);
+                        setMobileMenuOpen(false);
+                      }}
+                      className="px-2 py-0.5 bg-slate-100 text-[10px] font-medium text-slate-700 rounded-md hover:bg-slate-200"
+                    >
+                      {subItem}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

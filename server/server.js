@@ -11,6 +11,7 @@ const categoryController = require('./controllers/categoryController');
 const cartController = require('./controllers/cartController');
 const orderController = require('./controllers/orderController');
 const adminController = require('./controllers/adminController');
+const wishlistController = require('./controllers/wishlistController');
 const aiService = require('./services/aiService');
 const db = require('./db/database');
 
@@ -23,7 +24,7 @@ app.use(express.json());
 
 // Health Check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', time: new Date().toISOString() });
+  res.json({ status: 'ok', store: 'BUYNEST', time: new Date().toISOString() });
 });
 
 // --- Auth Routes ---
@@ -32,11 +33,18 @@ app.post('/api/auth/login', authController.login);
 app.get('/api/auth/me', verifyToken, authController.getMe);
 
 // --- Product Routes ---
+app.get('/api/products/facets', productController.getFacets);
+app.get('/api/products/:id/bundle', productController.getBundle);
 app.get('/api/products', productController.getProducts);
 app.get('/api/products/:id', productController.getProductById);
 app.post('/api/products', verifyToken, requireAdmin, productController.createProduct);
 app.put('/api/products/:id', verifyToken, requireAdmin, productController.updateProduct);
 app.delete('/api/products/:id', verifyToken, requireAdmin, productController.deleteProduct);
+
+// --- Wishlist Routes ---
+app.get('/api/wishlist', verifyToken, wishlistController.getWishlist);
+app.post('/api/wishlist', verifyToken, wishlistController.addToWishlist);
+app.delete('/api/wishlist/:productId', verifyToken, wishlistController.removeFromWishlist);
 
 // --- Category Routes ---
 app.get('/api/categories', categoryController.getCategories);
