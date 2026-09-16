@@ -45,6 +45,8 @@ async function initDatabase() {
       product_id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       brand TEXT DEFAULT 'BUYNEST Select',
+      model TEXT,
+      sku TEXT,
       category TEXT NOT NULL,
       sub_category TEXT DEFAULT 'General',
       description TEXT NOT NULL,
@@ -56,14 +58,20 @@ async function initDatabase() {
       images TEXT,
       sizes TEXT,
       colors TEXT,
+      variants TEXT,
       rating REAL DEFAULT 4.5,
       reviews_count INTEGER DEFAULT 0,
       seller_name TEXT DEFAULT 'BUYNEST Retail',
       specifications TEXT,
+      features TEXT,
       tags TEXT,
       gender TEXT DEFAULT 'Unisex',
       featured INTEGER DEFAULT 0,
       is_popular INTEGER DEFAULT 0,
+      gst_percent INTEGER DEFAULT 18,
+      delivery_info TEXT DEFAULT 'Standard Delivery in 3-5 days. Free on orders above ₹499',
+      return_info TEXT DEFAULT '10-day replacement and return policy',
+      is_new_arrival INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -81,11 +89,13 @@ async function initDatabase() {
       cart_id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
       product_id INTEGER NOT NULL,
+      selected_color TEXT,
+      selected_size TEXT,
+      sku TEXT,
       quantity INTEGER NOT NULL DEFAULT 1,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-      FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE,
-      UNIQUE(user_id, product_id)
+      FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS orders (
@@ -98,6 +108,14 @@ async function initDatabase() {
       shipping_city TEXT NOT NULL,
       shipping_postal TEXT NOT NULL,
       payment_method TEXT NOT NULL,
+      razorpay_order_id TEXT,
+      razorpay_payment_id TEXT,
+      razorpay_signature TEXT,
+      payment_status TEXT DEFAULT 'pending',
+      subtotal REAL DEFAULT 0,
+      tax_amount REAL DEFAULT 0,
+      delivery_fee REAL DEFAULT 0,
+      discount_amount REAL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
     );
@@ -106,6 +124,9 @@ async function initDatabase() {
       item_id INTEGER PRIMARY KEY AUTOINCREMENT,
       order_id INTEGER NOT NULL,
       product_id INTEGER NOT NULL,
+      selected_color TEXT,
+      selected_size TEXT,
+      sku TEXT,
       quantity INTEGER NOT NULL,
       price REAL NOT NULL,
       FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
@@ -116,16 +137,38 @@ async function initDatabase() {
   const columnsToAdd = [
     "ALTER TABLE products ADD COLUMN sub_category TEXT DEFAULT 'General';",
     "ALTER TABLE products ADD COLUMN brand TEXT DEFAULT 'BUYNEST Select';",
+    "ALTER TABLE products ADD COLUMN model TEXT;",
+    "ALTER TABLE products ADD COLUMN sku TEXT;",
     "ALTER TABLE products ADD COLUMN mrp REAL DEFAULT 0;",
     "ALTER TABLE products ADD COLUMN discount_percent INTEGER DEFAULT 0;",
     "ALTER TABLE products ADD COLUMN images TEXT;",
     "ALTER TABLE products ADD COLUMN sizes TEXT;",
     "ALTER TABLE products ADD COLUMN colors TEXT;",
+    "ALTER TABLE products ADD COLUMN variants TEXT;",
     "ALTER TABLE products ADD COLUMN seller_name TEXT DEFAULT 'BUYNEST Retail';",
     "ALTER TABLE products ADD COLUMN specifications TEXT;",
+    "ALTER TABLE products ADD COLUMN features TEXT;",
     "ALTER TABLE products ADD COLUMN tags TEXT;",
     "ALTER TABLE products ADD COLUMN gender TEXT DEFAULT 'Unisex';",
-    "ALTER TABLE products ADD COLUMN is_popular INTEGER DEFAULT 0;"
+    "ALTER TABLE products ADD COLUMN is_popular INTEGER DEFAULT 0;",
+    "ALTER TABLE products ADD COLUMN gst_percent INTEGER DEFAULT 18;",
+    "ALTER TABLE products ADD COLUMN delivery_info TEXT DEFAULT 'Standard Delivery in 3-5 days. Free on orders above ₹499';",
+    "ALTER TABLE products ADD COLUMN return_info TEXT DEFAULT '10-day replacement and return policy';",
+    "ALTER TABLE products ADD COLUMN is_new_arrival INTEGER DEFAULT 0;",
+    "ALTER TABLE cart ADD COLUMN selected_color TEXT;",
+    "ALTER TABLE cart ADD COLUMN selected_size TEXT;",
+    "ALTER TABLE cart ADD COLUMN sku TEXT;",
+    "ALTER TABLE order_items ADD COLUMN selected_color TEXT;",
+    "ALTER TABLE order_items ADD COLUMN selected_size TEXT;",
+    "ALTER TABLE order_items ADD COLUMN sku TEXT;",
+    "ALTER TABLE orders ADD COLUMN razorpay_order_id TEXT;",
+    "ALTER TABLE orders ADD COLUMN razorpay_payment_id TEXT;",
+    "ALTER TABLE orders ADD COLUMN razorpay_signature TEXT;",
+    "ALTER TABLE orders ADD COLUMN payment_status TEXT DEFAULT 'pending';",
+    "ALTER TABLE orders ADD COLUMN subtotal REAL DEFAULT 0;",
+    "ALTER TABLE orders ADD COLUMN tax_amount REAL DEFAULT 0;",
+    "ALTER TABLE orders ADD COLUMN delivery_fee REAL DEFAULT 0;",
+    "ALTER TABLE orders ADD COLUMN discount_amount REAL DEFAULT 0;"
   ];
 
   for (const colSql of columnsToAdd) {
@@ -156,8 +199,10 @@ const dbWrapper = {
 
   exec: (sql) => {
     if (!rawDb) throw new Error('Database not initialized yet.');
-    rawDb.run(sql);
-    saveToDisk();
+    rawDb.exec(sql);
+    if (!inTransaction) {
+      saveToDisk();
+    }
   },
 
   pragma: (sql) => {

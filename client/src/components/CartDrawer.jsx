@@ -117,6 +117,25 @@ export default function CartDrawer({ onProceedToCheckout, onOpenAuth }) {
                       <p className="text-[11px] text-slate-400 uppercase font-semibold mt-0.5">
                         {item.category}
                       </p>
+                      {(item.selected_color || item.selected_size) && (
+                        <div className="flex flex-wrap gap-1 mt-1 text-[10px]">
+                          {item.selected_color && item.selected_color !== 'Default' && (
+                            <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-medium">
+                              Color: {item.selected_color}
+                            </span>
+                          )}
+                          {item.selected_size && item.selected_size !== 'Standard' && (
+                            <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-medium">
+                              Size: {item.selected_size}
+                            </span>
+                          )}
+                          {item.sku && (
+                            <span className="text-slate-400 font-mono text-[9px] self-center">
+                              {item.sku}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <p className="text-xs font-black text-slate-900 mt-1">
                         ₹{Number(item.price).toLocaleString('en-IN')}
                       </p>

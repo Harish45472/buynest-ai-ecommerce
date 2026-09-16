@@ -44,13 +44,20 @@ export function CartProvider({ children }) {
     refreshCart();
   }, [user]);
 
-  const addToCart = async (productId, quantity = 1) => {
+  const addToCart = async (productId, quantity = 1, variantOptions = {}) => {
     if (!user) {
       showToast('Please log in to add items to your cart.', 'info');
       return { success: false, requireAuth: true };
     }
     try {
-      const res = await api.post('/cart', { product_id: productId, quantity });
+      const payload = {
+        product_id: productId,
+        quantity,
+        selected_color: variantOptions.selected_color || null,
+        selected_size: variantOptions.selected_size || null,
+        sku: variantOptions.sku || null
+      };
+      const res = await api.post('/cart', payload);
       setItems(res.data.items || []);
       setSubtotal(res.data.subtotal || 0);
       setTotalItems(res.data.totalItems || 0);

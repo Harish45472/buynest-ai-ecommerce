@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
+import { ComparisonProvider } from './context/ComparisonContext';
 import Navbar from './components/Navbar';
 import CartDrawer from './components/CartDrawer';
 import WishlistDrawer from './components/WishlistDrawer';
 import ProductDetailModal from './components/ProductDetailModal';
+import ProductComparisonModal from './components/ProductComparisonModal';
 import AiAssistant from './components/AiAssistant';
 import AuthModal from './components/AuthModal';
 import NotificationToast from './components/NotificationToast';
@@ -27,6 +29,17 @@ function MainLayout() {
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [highlightOrderId, setHighlightOrderId] = useState(null);
+
+  // When user logs in, prioritize clothes immediately
+  const prevUserRef = React.useRef(user);
+  React.useEffect(() => {
+    if (user && !prevUserRef.current) {
+      setSelectedCategory('Men');
+      setSelectedSubCategory('all');
+      setActiveView('home');
+    }
+    prevUserRef.current = user;
+  }, [user]);
 
   const handleOrderComplete = (orderId) => {
     setHighlightOrderId(orderId);
@@ -57,6 +70,7 @@ function MainLayout() {
         onOpenAuth={() => setIsAuthOpen(true)}
         activeView={activeView}
         setActiveView={setActiveView}
+        onSelectProduct={(p) => setSelectedProduct(p)}
       />
 
       {/* Slide-out Cart Drawer */}
@@ -72,29 +86,32 @@ function MainLayout() {
         onSelectProduct={(p) => setSelectedProduct(p)}
       />
 
-      {/* Product Detail Modal */}
-      {selectedProduct && (
-        <ProductDetailModal
-          product={selectedProduct}
-          onClose={() => setSelectedProduct(null)}
-          onSelectProduct={(p) => setSelectedProduct(p)}
-        />
-      )}
+      {/* Product Comparison Modal */}
+      <ProductComparisonModal />
 
-      {/* AI Assistant Chat Widget / Modal */}
+      {/* Product Detail Modal */}
+      <ProductDetailModal
+        product={selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+      />
+
+      {/* AI Assistant Chat Sidebar / Widget */}
       <AiAssistant
         isOpen={isAiOpen}
         onClose={() => setIsAiOpen(false)}
-        onSelectProduct={(p) => setSelectedProduct(p)}
+        onSelectProduct={(p) => {
+          setSelectedProduct(p);
+          setIsAiOpen(false);
+        }}
       />
 
-      {/* Sign-In / Register Modal */}
+      {/* Auth Modal */}
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
       />
 
-      {/* Main Content Area based on active view */}
+      {/* Main Dynamic View Content */}
       <main className="flex-1">
         {activeView === 'home' && (
           <HomePage
@@ -111,31 +128,35 @@ function MainLayout() {
 
         {activeView === 'checkout' && (
           <CheckoutPage
-            onBackToShopping={() => setActiveView('home')}
-            onOrderComplete={handleOrderComplete}
+            onOrderSuccess={handleOrderComplete}
+            onContinueShopping={() => setActiveView('home')}
+            onOpenAuth={() => setIsAuthOpen(true)}
           />
         )}
 
         {activeView === 'orders' && (
           <OrderHistoryPage
-            onBackToShopping={() => setActiveView('home')}
-            onSelectProduct={(p) => setSelectedProduct(p)}
             highlightOrderId={highlightOrderId}
+            onShopMore={() => setActiveView('home')}
+            onOpenAuth={() => setIsAuthOpen(true)}
           />
         )}
 
         {activeView === 'admin' && (
           isAdmin ? (
-            <AdminDashboard onBackToShopping={() => setActiveView('home')} />
+            <AdminDashboard />
           ) : (
-            <div className="max-w-md mx-auto py-24 text-center px-4">
-              <h2 className="text-xl font-bold text-slate-800">Access Restricted</h2>
-              <p className="text-xs text-slate-500 mt-2 mb-6">
-                You need Administrator credentials to view the store management console.
+            <div className="max-w-md mx-auto my-20 p-8 bg-white rounded-3xl shadow-sm text-center border border-slate-100">
+              <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+                ⚠️
+              </div>
+              <h2 className="text-xl font-bold text-slate-800 mb-2">Admin Access Required</h2>
+              <p className="text-sm text-slate-500 mb-6">
+                You must be logged in as an administrator to manage BUYNEST catalog, categories, and fulfill orders.
               </p>
               <button
                 onClick={() => setIsAuthOpen(true)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm"
+                className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-sm transition"
               >
                 Sign In with Admin Account
               </button>
@@ -151,7 +172,7 @@ function MainLayout() {
             <span className="font-bold text-white text-sm">BUYNEST</span>
             <span>• India's AI-Powered Smart Lifestyle Marketplace</span>
           </div>
-          <p>© 2026 BUYNEST India Ltd. All rights reserved. 200+ Products across 7 Core Categories.</p>
+          <p>© 2026 BUYNEST India Ltd. All rights reserved. 680+ Products across 7 Core Categories with Razorpay & Real UPI.</p>
         </div>
       </footer>
     </div>
@@ -163,7 +184,9 @@ export default function App() {
     <AuthProvider>
       <CartProvider>
         <WishlistProvider>
-          <MainLayout />
+          <ComparisonProvider>
+            <MainLayout />
+          </ComparisonProvider>
         </WishlistProvider>
       </CartProvider>
     </AuthProvider>

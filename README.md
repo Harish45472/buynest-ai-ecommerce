@@ -1,6 +1,6 @@
-# 🛍️ AuraMart — AI-Powered E-Commerce & Shopping Assistant
+# 🛍️ BUYNEST — AI-Powered Smart Lifestyle Marketplace
 
-A modern, full-stack e-commerce web platform featuring dynamic product catalogue browsing, category filtering, real-time stock validation, cart & checkout workflow, order fulfillment status tracking, an admin management dashboard, and an embedded **AI Shopping Assistant** that recommends matching items from the store catalogue.
+A modern, full-stack Indian e-commerce web platform featuring dynamic product catalogue browsing, category filtering, real-time stock validation, cart & checkout workflow, order fulfillment status tracking, admin management dashboard, Razorpay & UPI payment simulation, and an embedded **AI Shopping Assistant** that recommends matching items from the 1,280+ store catalogue.
 
 ---
 
@@ -10,109 +10,73 @@ A modern, full-stack e-commerce web platform featuring dynamic product catalogue
   - JWT-based authentication with bcrypt password hashing.
   - Role-based access control (`user` and `admin`).
   - 1-Click Demo Login buttons for fast testing.
-- 📦 **Product Catalogue & Search**:
-  - Department filtering (`Electronics`, `Fashion`, `Home & Living`, `Sports & Fitness`, `Accessories`).
-  - Keyword search across product names and descriptions.
-  - Budget range filters and sorting (Price Low-High, High-Low, Highest Rated, Newest, Featured).
-  - Real-time stock status pills (`In Stock`, `Only X Left!`, `Out of Stock`).
+- 📦 **1,280+ Curated Products & Real Photography**:
+  - 10 Core Departments (`Men`, `Women`, `Electronics`, `Home & Kitchen`, `Beauty & Personal Care`, `Grocery`, `Sports & Fitness`, `Books`, `Toys & Baby`, `Automotive`).
+  - 100% Real studio product photography with dynamic color-accurate variant switching (0 vector/SVG graphics).
+  - Prioritized apparel display on login and natural browsing.
+- 🔍 **Natural Language Search & Smart Filtering**:
+  - Natural query parsing: e.g., "shoes under 3000", "levis jeans", "black shirt".
+  - Multi-attribute facet filters (Brand, Category, Subcategory, Price Range, Min Rating, In-Stock, Color, Size).
 - 🛒 **Cart & Real-Time Stock Validation**:
-  - Slide-out cart drawer with free-shipping progress tracker ($50 threshold).
+  - Slide-out cart drawer with free-shipping progress tracker (₹999 threshold).
   - Quantity controls strictly bounded by available inventory stock.
-  - Dynamic subtotals and real-time stock warning indicators.
-- 💳 **Checkout & Atomic Order Fulfillment**:
-  - Multi-step checkout with recipient shipping details and payment simulation.
-  - Atomic database transactions ensure stock is reserved and deducted safely with zero overselling.
+- 💳 **Checkout, Razorpay & Real UPI Simulation**:
+  - Full Razorpay checkout modal simulation with UPI ID validation and QR code workflows.
+  - Atomic SQLite transactions ensure stock is reserved and deducted safely with zero overselling.
+  - 1-click customer order cancellations with automatic inventory reversal before shipment.
 - 🚚 **Order History & Live Status Tracking**:
-  - Visual 4-step progress stepper: `Order Placed` ➔ `Processing` ➔ `Shipped` ➔ `Delivered`.
+  - Visual 5-step progress stepper: `Confirmed` ➔ `Processing` ➔ `Shipped` ➔ `Out for Delivery` ➔ `Delivered`.
   - Itemized shipment receipts and 1-click re-order shortcuts.
-- 🛡️ **Admin Management Console**:
-  - Real-time KPI metrics: Net Revenue, Orders count, Catalog size, Low-stock alerts.
-  - Product CRUD: Create, Edit, Delete products with image URLs and inventory stock.
-  - Category CRUD: Add and manage departments.
-  - Live Order Status Updater: transition orders across statuses (`pending` ➔ `processing` ➔ `shipped` ➔ `delivered` / `cancelled`).
-- 🤖 **AI Shopping Assistant ("Aura")**:
-  - Dual-mode architecture:
-    1. **Zero-Config Smart Catalogue Engine**: Works instantly out of the box with natural language intent parsing, budget constraints (e.g. "under $100"), and keyword matching.
-    2. **External LLM Mode**: Supports custom OpenAI (`OPENAI_API_KEY`) or Google Gemini (`GEMINI_API_KEY`) configured via `.env` or the in-app settings drawer.
+- 🤖 **AI Shopping Assistant ("BUYNEST AI")**:
+  - Natural language intent parsing, budget constraints (e.g. "laptop under 60000"), and smart semantic recommendations.
   - Interactive embedded recommendation cards right inside the chat with one-click **"Add to Cart"** and **"Quick View"**.
-  - Suggested prompt chips for fast discovery.
-  - Contextual complementary item recommendations on product detail pages.
+  - Contextual product comparisons and wedding/festive outfit suggestions.
 
 ---
 
-## 🗄️ Database Schema (SQLite)
+## 🚀 Quick Start Guide (Combined Fullstack)
 
-- **`users`**: `user_id`, `name`, `email`, `password_hash`, `role`, `created_at`
-- **`categories`**: `category_id`, `name`, `description`, `slug`
-- **`products`**: `product_id`, `name`, `category`, `description`, `price`, `stock`, `image_url`, `rating`, `reviews_count`, `featured`, `created_at`
-- **`cart`**: `cart_id`, `user_id`, `product_id`, `quantity`, `updated_at`
-- **`orders`**: `order_id`, `user_id`, `total_amount`, `status`, `shipping_name`, `shipping_address`, `shipping_city`, `shipping_postal`, `payment_method`, `created_at`
-- **`order_items`**: `item_id`, `order_id`, `product_id`, `quantity`, `price`
-
----
-
-## 🔑 Demo Accounts
-
-The database comes pre-seeded with sample data and test accounts:
-
-| Role | Email | Password | Access |
-| :--- | :--- | :--- | :--- |
-| **Store Admin** | `admin@ecommerce.com` | `admin123` | Full access to Admin Console, Product CRUD, Order Status Manager |
-| **Customer** | `user@ecommerce.com` | `user123` | Catalogue browsing, Cart, Checkout, Order History & Tracking |
-
-*(Both accounts can be logged into with a single click using the demo buttons inside the Sign In modal).*
-
----
-
-## 🚀 Quick Start Guide
-
-### Prerequisites
-- Node.js (v18+)
-- npm
-
-### 1. Install Dependencies
+### 1. Install All Dependencies
+From the project root directory:
 ```bash
-# Install backend dependencies
-cd server
-npm install
-
-# Install frontend dependencies
-cd ../client
-npm install
+npm run install:all
 ```
 
 ### 2. Seed Database
 ```bash
-cd ../server
 npm run seed
 ```
 
 ### 3. Run the Application
-You can run the application in two ways:
 
-#### Option A: Single Port Production Mode (Recommended)
+#### Option A: Unified Fullstack Mode (Single Port 5000 — Recommended)
 ```bash
-# Build frontend
-cd client
+# Build frontend static bundle
 npm run build
 
-# Start server (serves both API & Frontend on http://localhost:5000)
-cd ../server
+# Start combined server (serves both React Frontend & Express API on port 5000)
 npm start
 ```
 Open **[http://localhost:5000](http://localhost:5000)** in your browser!
 
-#### Option B: Vite Dev Server Mode (Hot Reload)
+#### Option B: Concurrent Development Mode (Vite Hot Reload + Express API)
 ```bash
-# Terminal 1: Backend API
-cd server
-npm start
-
-# Terminal 2: Frontend Vite Dev Server
-cd client
 npm run dev
 ```
-Open **[http://localhost:5173](http://localhost:5173)** in your browser!
+- Frontend: **[http://localhost:5173](http://localhost:5173)**
+- Backend API: **[http://localhost:5000](http://localhost:5000)**
+
+---
+
+## 🧪 Verification & Audit Tools
+
+```bash
+# Run 20-point enterprise test suite (Auth, Catalog, Cart, Razorpay, Stock, AI)
+npm test
+
+# Run product photography audit (0 SVGs, 100% verified photography)
+npm run audit:images
+```
 
 ---
 

@@ -7,7 +7,7 @@ const db = require('../db/database');
 function localSmartRecommendation(userMessage, allProducts) {
   const query = userMessage.toLowerCase();
 
-  // 1. Detect budget / price constraints (supports ₹, Rs, INR, k, e.g. "under 2k", "below ₹1500", "under 1000 rupees")
+  // 1. Detect budget / price constraints (supports ₹, Rs, INR, k, e.g. "under 2k", "below ₹1500", "under 1000 rupees", "under 60000")
   let maxPrice = null;
   const underMatch = query.match(/(?:under|below|less than|max|budget of|within)\s*(?:₹|rs\.?|inr)?\s*(\d+(?:\.\d+)?)\s*(k|thousand|rupees|rs)?/i);
   if (underMatch) {
@@ -16,6 +16,98 @@ function localSmartRecommendation(userMessage, allProducts) {
       val *= 1000;
     }
     maxPrice = val;
+  }
+
+  // --- SPECIALIZED INTENT HANDLER 1: Wedding Outfit Finder ---
+  if (query.includes('wedding') || query.includes('shaadi') || query.includes('sangeet') || query.includes('reception') || (query.includes('outfit') && (query.includes('party') || query.includes('traditional')))) {
+    const weddingMatches = allProducts.filter(p => {
+      const name = p.name.toLowerCase();
+      const sub = (p.sub_category || '').toLowerCase();
+      return (
+        sub === 'ethnic wear' ||
+        sub === 'lehengas' ||
+        sub === 'sarees' ||
+        sub === 'salwar suits' ||
+        name.includes('sherwani') ||
+        name.includes('lehenga') ||
+        name.includes('kurta') ||
+        name.includes('saree') ||
+        name.includes('bundi') ||
+        name.includes('nehru')
+      ) && (maxPrice === null || p.price <= maxPrice);
+    });
+
+    if (weddingMatches.length > 0) {
+      const picks = weddingMatches.sort((a, b) => b.rating - a.rating).slice(0, 4);
+      return {
+        reply: `🎉 For your grand wedding & festive celebrations, here is a hand-picked regal ensemble from BUYNEST featuring luxurious silks, intricate zari embroidery, and festive elegance:`,
+        recommendations: picks
+      };
+    }
+  }
+
+  // --- SPECIALIZED INTENT HANDLER 2: Laptop for Programming / Coding Under Budget ---
+  if ((query.includes('laptop') || query.includes('pc') || query.includes('computer')) && (query.includes('programm') || query.includes('cod') || query.includes('developer') || query.includes('software') || query.includes('work') || query.includes('engineering') || maxPrice !== null)) {
+    const laptopMatches = allProducts.filter(p => {
+      const sub = (p.sub_category || '').toLowerCase();
+      const name = p.name.toLowerCase();
+      return (sub === 'laptops' || name.includes('thinkpad') || name.includes('vivobook') || name.includes('pavilion') || name.includes('macbook')) && (maxPrice === null || p.price <= maxPrice);
+    });
+
+    if (laptopMatches.length > 0) {
+      // Sort by price closest to budget or best specs
+      const picks = laptopMatches.sort((a, b) => (maxPrice ? (b.price - a.price) : (b.rating - a.rating))).slice(0, 4);
+      const budgetNote = maxPrice ? ` under ₹${maxPrice.toLocaleString('en-IN')}` : '';
+      return {
+        reply: `💻 Here are the best performance laptops for programming and multitasking${budgetNote}. Powered by fast multi-core CPUs, NVMe SSDs, and comfortable keyboards suited for extended coding sessions:`,
+        recommendations: picks
+      };
+    }
+  }
+
+  // --- SPECIALIZED INTENT HANDLER 3: Running / Sports Shoes Under Budget ---
+  if ((query.includes('shoe') || query.includes('sneaker') || query.includes('running')) && (query.includes('run') || query.includes('sport') || query.includes('jog') || query.includes('gym') || maxPrice !== null)) {
+    const shoeMatches = allProducts.filter(p => {
+      const sub = (p.sub_category || '').toLowerCase();
+      const cat = p.category.toLowerCase();
+      return (sub === 'sports shoes' || sub === 'shoes' || sub === 'sneakers' || cat === 'sports & fitness') && (maxPrice === null || p.price <= maxPrice);
+    });
+
+    if (shoeMatches.length > 0) {
+      const picks = shoeMatches.sort((a, b) => b.rating - a.rating).slice(0, 4);
+      const budgetNote = maxPrice ? ` under ₹${maxPrice.toLocaleString('en-IN')}` : '';
+      return {
+        reply: `👟 Top-rated running and athletic footwear${budgetNote} engineered with shock-absorbent cushioning, high grip traction, and breathable mesh uppers:`,
+        recommendations: picks
+      };
+    }
+  }
+
+  // --- SPECIALIZED INTENT HANDLER 4: Product Comparison (vs / compare) ---
+  if (query.includes('compare') || query.includes(' vs ') || query.includes(' versus ') || query.includes('difference between')) {
+    // Find candidate products mentioned in the query
+    const matchedProducts = allProducts.filter(p => {
+      const name = p.name.toLowerCase();
+      const brand = (p.brand || '').toLowerCase();
+      const words = name.split(' ').filter(w => w.length > 3);
+      return words.some(w => query.includes(w)) || (brand.length > 3 && query.includes(brand));
+    });
+
+    if (matchedProducts.length >= 2) {
+      const itemA = matchedProducts[0];
+      const itemB = matchedProducts[1];
+      const priceDiff = Math.abs(itemA.price - itemB.price);
+
+      const comparisonSummary = `⚖️ **Side-by-Side Comparison:**\n` +
+        `• **${itemA.name}**: ₹${itemA.price.toLocaleString('en-IN')} (MRP ₹${itemA.mrp.toLocaleString('en-IN')}, ${itemA.discount_percent}% off, Rating ${itemA.rating}★)\n` +
+        `• **${itemB.name}**: ₹${itemB.price.toLocaleString('en-IN')} (MRP ₹${itemB.mrp.toLocaleString('en-IN')}, ${itemB.discount_percent}% off, Rating ${itemB.rating}★)\n` +
+        `• **Difference**: ₹${priceDiff.toLocaleString('en-IN')}. Both are genuine items verified by BUYNEST with manufacturer warranty and return assurance.`;
+
+      return {
+        reply: comparisonSummary,
+        recommendations: [itemA, itemB]
+      };
+    }
   }
 
   // 2. Extract keyword tokens
@@ -28,7 +120,7 @@ function localSmartRecommendation(userMessage, allProducts) {
   const categoryKeywords = {
     'Men': ['men', 'mens', 'shirt', 'tshirt', 't-shirt', 'jeans', 'trouser', 'jacket', 'shoes', 'watch', 'wallet', 'bag', 'sunglasses', 'male', 'boy', 'roadster', 'wrogn', 'peter england', 'allen solly', 'flying machine', 'blackberrys', 'uspa'],
     'Women': ['women', 'womens', 'ladies', 'dress', 'top', 'kurti', 'kurta', 'saree', 'sari', 'jeans', 'trouser', 'handbag', 'shoes', 'heels', 'watch', 'jewellery', 'necklace', 'earrings', 'jhumka', 'sunglasses', 'biba', 'libas', 'vero moda', 'only', 'giva', 'zaveri'],
-    'Electronics': ['electronics', 'smartphone', 'phone', 'mobile', 'laptop', 'headphones', 'earbuds', 'tws', 'smartwatch', 'tablet', 'speaker', 'power bank', 'charger', 'camera', 'oneplus', 'samsung', 'sony', 'boat', 'noise', 'jbl', 'asus', 'lenovo', 'realme'],
+    'Electronics': ['electronics', 'smartphone', 'phone', 'mobile', 'laptop', 'headphones', 'earbuds', 'tws', 'smartwatch', 'tablet', 'speaker', 'power bank', 'charger', 'camera', 'oneplus', 'samsung', 'sony', 'boat', 'noise', 'jbl', 'asus', 'lenovo', 'realme', 'apple', 'macbook', 'iphone'],
     'Home & Kitchen': ['home', 'kitchen', 'furniture', 'bedsheet', 'curtains', 'cookware', 'tawa', 'cooker', 'mixer', 'grinder', 'induction', 'storage', 'bottle', 'decor', 'lighting', 'lamp', 'philips', 'prestige', 'hawkins', 'bombay dyeing', 'milton', 'cello', 'wipro'],
     'Beauty & Personal Care': ['beauty', 'skincare', 'makeup', 'lipstick', 'serum', 'sunscreen', 'perfume', 'fragrance', 'hair', 'haircare', 'shampoo', 'trimmer', 'grooming', 'shaving', 'minimalist', 'maybelline', 'lakme', 'bella vita', 'derma', 'forest essentials'],
     'Sports & Fitness': ['sports', 'fitness', 'shoes', 'running', 'tshirt', 'track pant', 'joggers', 'gym', 'dumbbell', 'weights', 'resistance bands', 'yoga', 'cricket', 'bat', 'football', 'puma', 'decathlon', 'nivia', 'boldfit', 'sg', 'asics', 'cultsport'],
@@ -101,10 +193,10 @@ function localSmartRecommendation(userMessage, allProducts) {
       reply = `If you're looking for premium sound quality and long battery life, here are our top-rated audio gadgets:`;
     } else if (cleanTokens.some(t => ['trimmer', 'serum', 'skincare', 'perfume', 'fragrance'].includes(t))) {
       reply = `Here are our trending personal care and grooming picks with natural formulations and high ratings:`;
-    } else if (cleanTokens.some(t => ['laptop', 'pc', 'quantum'].includes(t))) {
-      reply = `For high performance computing, multitasking, and productivity, here are our top laptop choices:`;
+    } else if (cleanTokens.some(t => ['laptop', 'pc', 'programming', 'developer'].includes(t))) {
+      reply = `For high performance computing, multitasking, and software development, here are our top laptop choices:`;
     } else {
-      reply = `Based on your request, I've curated these top-rated items from our store catalogue:`;
+      reply = `Based on your request, I've curated these top-rated items from our BUYNEST catalogue:`;
     }
   } else {
     reply = `I couldn't find an exact match, but here are some of our most trending and top-rated products in India right now:`;
@@ -250,13 +342,29 @@ exports.getSimilarRecommendations = (req, res) => {
       return res.status(404).json({ error: 'Product not found.' });
     }
 
-    // Find complementary products in same category or matching price range
-    const similar = db.prepare(`
-      SELECT * FROM products 
-      WHERE category = ? AND product_id != ? AND stock > 0
-      ORDER BY rating DESC 
-      LIMIT 3
-    `).all(current.category, current.product_id);
+    // Find complementary products in same sub-category and category
+    let similar = [];
+    if (current.sub_category && current.sub_category !== 'General') {
+      similar = db.prepare(`
+        SELECT * FROM products 
+        WHERE sub_category = ? AND product_id != ? AND stock > 0
+        ORDER BY rating DESC, reviews_count DESC 
+        LIMIT 4
+      `).all(current.sub_category, current.product_id);
+    }
+
+    if (similar.length < 4) {
+      const remainingLimit = 4 - similar.length;
+      const existingIds = [current.product_id, ...similar.map(s => s.product_id)];
+      const placeholders = existingIds.map(() => '?').join(',');
+      const moreSimilar = db.prepare(`
+        SELECT * FROM products 
+        WHERE category = ? AND product_id NOT IN (${placeholders}) AND stock > 0
+        ORDER BY rating DESC 
+        LIMIT ${remainingLimit}
+      `).all(current.category, ...existingIds);
+      similar = [...similar, ...moreSimilar];
+    }
 
     res.json({
       title: `AI Recommended with this item`,

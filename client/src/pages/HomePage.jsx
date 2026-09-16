@@ -1,8 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Sparkles, ArrowUpDown, RefreshCw, Zap, ShieldCheck, Truck, ChevronRight, Filter, X, Star, Check } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
+import RecentlyViewed from '../components/RecentlyViewed';
 import productService from '../api/productService';
 import { MEGA_MENU_DATA } from '../components/Navbar';
+import { useComparison } from '../context/ComparisonContext';
+
+export const CATEGORY_SUBCATEGORIES = {
+  'Men': ['T-shirts', 'Shirts', 'Jeans', 'Trousers', 'Hoodies', 'Jackets', 'Ethnic wear', 'Formal wear', 'Innerwear', 'Shoes', 'Sneakers', 'Sandals', 'Watches', 'Wallets', 'Belts', 'Sunglasses', 'Bags', 'Blazers', 'Suits', 'Shorts', 'Sweatshirts', 'Kurtas'],
+  'Women': ['T-shirts', 'Shirts', 'Dresses', 'Tops', 'Kurtis', 'Sarees', 'Lehengas', 'Salwar suits', 'Jeans', 'Trousers', 'Ethnic wear', 'Western wear', 'Heels', 'Sneakers', 'Sandals', 'Handbags', 'Watches', 'Jewellery', 'Sunglasses', 'Skirts', 'Leggings', 'Jackets'],
+  'Electronics': ['Smartphones', 'Laptops', 'Tablets', 'Smart TVs', 'Earbuds', 'Headphones', 'Smartwatches', 'Speakers', 'Cameras', 'Gaming accessories', 'Power banks', 'Chargers', 'Computer accessories', 'Monitors', 'Keyboards', 'Mice', 'Printers'],
+  'Home & Kitchen': ['Furniture', 'Bedsheets', 'Curtains', 'Kitchen appliances', 'Cookware', 'Storage products', 'Home decor', 'Lighting', 'Beds', 'Sofas', 'Tables', 'Chairs', 'Mattresses', 'Cleaning products'],
+  'Beauty & Personal Care': ['Skincare', 'Makeup', 'Perfumes', 'Hair care', 'Grooming products', 'Personal hygiene', 'Fragrances', 'Bath & Body', 'Hair Styling', 'Oral Care'],
+  'Grocery': ['Snacks', 'Beverages', 'Rice', 'Atta', 'Pulses', 'Spices', 'Cooking Oil', 'Breakfast Foods', 'Chocolates', 'Dry Fruits'],
+  'Sports & Fitness': ['Sports shoes', 'T-shirts', 'Track pants', 'Gym equipment', 'Fitness accessories', 'Cricket products', 'Football products', 'Badminton racquets', 'Yoga mats'],
+  'Books': ['Fiction', 'Non-fiction', 'Programming', 'Engineering', 'Competitive Exams', 'Children\'s Books'],
+  'Toys & Baby': ['Toys', 'Games', 'Educational Toys', 'Baby Care', 'Baby Clothing', 'Boys Clothing', 'Girls Clothing', 'Kids Shoes'],
+  'Automotive': ['Car Accessories', 'Bike Accessories', 'Car Care', 'Helmets', 'Riding Gear']
+};
 
 export default function HomePage({
   searchTerm,
@@ -14,12 +29,15 @@ export default function HomePage({
   onSelectProduct,
   onOpenAiAssistant
 }) {
+  const { comparedProducts, setIsCompareModalOpen } = useComparison();
   const [products, setProducts] = useState([]);
   const [facets, setFacets] = useState({ brands: [], subCategories: [], priceRange: { min: 0, max: 100000 } });
   const [loading, setLoading] = useState(true);
 
   // Filter states
   const [selectedBrands, setSelectedBrands] = useState([]);
+  const [selectedSizes, setSelectedSizes] = useState([]);
+  const [selectedColors, setSelectedColors] = useState([]);
   const [brandSearch, setBrandSearch] = useState('');
   const [minRating, setMinRating] = useState('all');
   const [priceRange, setPriceRange] = useState('all');
@@ -61,16 +79,17 @@ export default function HomePage({
       if (sortBy) params.sortBy = sortBy;
 
       // Price bounds
-      if (priceRange === 'under999') {
+      if (priceRange === 'under999' || priceRange === 'budget') {
+        params.minPrice = 199;
         params.maxPrice = 999;
-      } else if (priceRange === '1000to2499') {
+      } else if (priceRange === '1000to2499' || priceRange === 'mid') {
         params.minPrice = 1000;
-        params.maxPrice = 2499;
-      } else if (priceRange === '2500to5000') {
-        params.minPrice = 2500;
-        params.maxPrice = 5000;
-      } else if (priceRange === 'over5000') {
-        params.minPrice = 5000;
+        params.maxPrice = 2999;
+      } else if (priceRange === '2500to5000' || priceRange === 'premium') {
+        params.minPrice = 3000;
+        params.maxPrice = 9999;
+      } else if (priceRange === 'over5000' || priceRange === 'luxury') {
+        params.minPrice = 10000;
       }
 
       const res = await productService.getProducts(params);
@@ -88,17 +107,60 @@ export default function HomePage({
     );
   };
 
+  const toggleSize = (size) => {
+    setSelectedSizes(prev =>
+      prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]
+    );
+  };
+
+  const toggleColor = (color) => {
+    setSelectedColors(prev =>
+      prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
+    );
+  };
+
   const resetAllFilters = () => {
     setSearchTerm('');
     setSelectedCategory('all');
     if (setSelectedSubCategory) setSelectedSubCategory('all');
     setSelectedBrands([]);
+    setSelectedSizes([]);
+    setSelectedColors([]);
     setMinRating('all');
     setPriceRange('all');
     setSelectedGender('all');
     setInStockOnly(false);
     setSortBy('featured');
   };
+
+  // Client-side multi-select filter for sizes and colors
+  const displayedProducts = useMemo(() => {
+    return products.filter((p) => {
+      if (selectedSizes.length > 0) {
+        let pSizes = [];
+        try {
+          pSizes = typeof p.sizes === 'string' ? JSON.parse(p.sizes) : (p.sizes || []);
+        } catch {
+          pSizes = [];
+        }
+        if (!selectedSizes.some((s) => pSizes.includes(s))) return false;
+      }
+
+      if (selectedColors.length > 0) {
+        let pColors = [];
+        try {
+          pColors = typeof p.colors === 'string' ? JSON.parse(p.colors) : (p.colors || []);
+        } catch {
+          pColors = [];
+        }
+        const pColorsLower = pColors.map((c) => String(c).toLowerCase());
+        if (!selectedColors.some((c) => pColorsLower.some((pc) => pc.includes(c.toLowerCase())))) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [products, selectedSizes, selectedColors]);
 
   // Filtered list of brands matching brand search box
   const visibleBrands = useMemo(() => {
@@ -110,6 +172,8 @@ export default function HomePage({
   const activeFiltersCount = (selectedCategory !== 'all' ? 1 : 0) +
     (selectedSubCategory !== 'all' ? 1 : 0) +
     selectedBrands.length +
+    selectedSizes.length +
+    selectedColors.length +
     (minRating !== 'all' ? 1 : 0) +
     (priceRange !== 'all' ? 1 : 0) +
     (selectedGender !== 'all' ? 1 : 0) +
@@ -118,41 +182,141 @@ export default function HomePage({
 
   return (
     <div className="min-h-screen pb-20 bg-slate-50/50">
-      {/* Hero Banner */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 text-white py-10 md:py-14 px-4 sm:px-6 lg:px-8">
-        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#22c55e_1px,transparent_1px)] [background-size:16px_16px]" />
+      {/* Classic Editorial Luxury Hero Banner */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950 text-white pt-12 pb-16 px-4 sm:px-6 lg:px-8 border-b border-slate-800/80">
+        <div className="absolute inset-0 opacity-25 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:20px_20px]" />
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative max-w-5xl mx-auto text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold tracking-wide uppercase shadow-inner">
-            <Sparkles className="w-3.5 h-3.5" />
-            AI-Powered Smart Shopping
+        <div className="relative max-w-5xl mx-auto text-center space-y-5">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/15 text-emerald-300 text-xs font-black tracking-widest uppercase shadow-sm backdrop-blur-md">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400 fill-current animate-pulse" />
+            <span>FESTIVE & WEDDING COLLECTION 2026</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
-            Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-indigo-300">BUYNEST</span>
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
+            Where Style Meets <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-200 to-amber-200">Intelligence</span>
           </h1>
 
-          <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
-            Explore 200+ authentic fashion, electronics, home, beauty, and fitness essentials. All priced in Indian Rupees (₹) with free delivery above ₹999.
+          <p className="text-slate-300 text-xs sm:text-sm md:text-base max-w-2xl mx-auto leading-relaxed font-medium">
+            Explore 680+ certified Indian fashion, electronics, home decor, and athletic gear. Enjoy smart AI recommendations, instant Razorpay UPI checkout, and hassle-free 1-click order cancellations.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
             <button
               onClick={onOpenAiAssistant}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-lg shadow-emerald-500/25 hover:scale-105 active:scale-95"
+              className="flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm transition-all shadow-xl shadow-emerald-500/25 hover:scale-105 active:scale-95"
             >
-              <Sparkles className="w-4 h-4 fill-current" />
-              <span>Ask AI Shopper</span>
+              <Sparkles className="w-4 h-4 fill-current text-slate-950" />
+              <span>Ask AI Shopping Assistant</span>
             </button>
             <button
-              onClick={() => { setSelectedCategory('Electronics'); setSelectedSubCategory('all'); }}
-              className="px-4 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-xs backdrop-blur-md transition"
+              onClick={() => { setSelectedCategory('Women'); setSelectedSubCategory('all'); }}
+              className="px-5 py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm backdrop-blur-md border border-white/10 transition hover:scale-105"
             >
-              Explore Top Electronics →
+              Explore Festive Ethnic Wear →
             </button>
           </div>
         </div>
+
+        {/* Circular Department Quick-Nav Avatars */}
+        <div className="relative max-w-5xl mx-auto mt-12 pt-8 border-t border-white/10">
+          <div className="flex items-center justify-between gap-3 overflow-x-auto pb-2 scrollbar-none">
+            {[
+              { name: 'Men', img: 'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?w=200&q=80', tag: 'Up to 60% Off' },
+              { name: 'Women', img: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=200&q=80', tag: 'Festive Ready' },
+              { name: 'Electronics', img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&q=80', tag: 'Latest Tech' },
+              { name: 'Home & Kitchen', img: 'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=200&q=80', tag: 'Modern Living' },
+              { name: 'Beauty & Personal Care', img: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=200&q=80', tag: 'Glow Essentials' },
+              { name: 'Grocery', img: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=200&q=80', tag: 'Fresh Harvest' },
+              { name: 'Sports & Fitness', img: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=200&q=80', tag: 'Active Life' },
+              { name: 'Books', img: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=200&q=80', tag: 'Top Reads' },
+              { name: 'Toys & Baby', img: 'https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=200&q=80', tag: 'Play & STEM' },
+              { name: 'Automotive', img: 'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?w=200&q=80', tag: 'Ride Gear' }
+            ].map((cat) => {
+              const isSelected = selectedCategory === cat.name;
+              return (
+                <button
+                  key={cat.name}
+                  onClick={() => {
+                    setSelectedCategory(cat.name);
+                    if (setSelectedSubCategory) setSelectedSubCategory('all');
+                  }}
+                  className="flex flex-col items-center gap-2 shrink-0 group focus:outline-none"
+                >
+                  <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full p-0.5 transition-all duration-300 ${
+                    isSelected 
+                      ? 'ring-4 ring-emerald-400 scale-105' 
+                      : 'ring-2 ring-white/20 group-hover:ring-emerald-400 group-hover:scale-105'
+                  }`}>
+                    <img
+                      src={cat.img}
+                      alt={cat.name}
+                      className="w-full h-full rounded-full object-cover shadow-md"
+                      loading="lazy"
+                    />
+                  </div>
+                  <span className={`text-[11px] font-black tracking-wide text-center ${
+                    isSelected ? 'text-emerald-400 font-extrabold' : 'text-slate-200 group-hover:text-white'
+                  }`}>
+                    {cat.name}
+                  </span>
+                  <span className="text-[9px] font-bold text-slate-400 bg-white/5 px-2 py-0.5 rounded-full border border-white/10 hidden sm:inline-block">
+                    {cat.tag}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </section>
+
+      {/* 4-Pillar Luxury Trust Badges Strip */}
+      <div className="bg-white border-b border-slate-200/80 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 text-slate-800">
+            <div className="flex items-center gap-3 p-2">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
+                <Truck className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-black text-slate-900">Express Delivery</p>
+                <p className="text-[11px] text-slate-500">Free over ₹499 across India</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-2">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0 shadow-2xs">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-black text-slate-900">100% Genuine Brands</p>
+                <p className="text-[11px] text-slate-500">Authorized seller warranty</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-2">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center shrink-0 shadow-2xs">
+                <Zap className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-black text-slate-900">Instant Razorpay UPI</p>
+                <p className="text-[11px] text-slate-500">Safe payments & fast refunds</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-2">
+              <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-700 flex items-center justify-center shrink-0 shadow-2xs">
+                <RefreshCw className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-xs font-black text-slate-900">Easy Cancellation</p>
+                <p className="text-[11px] text-slate-500">1-click order cancellation</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Main Content Area: Sidebar + Products */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -193,6 +357,89 @@ export default function HomePage({
                 <option value="rating_desc">Highest Rated (★)</option>
                 <option value="newest">Newest Arrivals</option>
               </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Department & Subcategory Carousel */}
+        <div className="pt-4 pb-3 border-b border-slate-200 space-y-3">
+          {/* Subcategory Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none text-xs">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 shrink-0 mr-1">
+              Styles:
+            </span>
+            <button
+              onClick={() => setSelectedSubCategory('all')}
+              className={`px-3 py-1.5 rounded-full font-bold transition shrink-0 ${
+                selectedSubCategory === 'all'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              All {selectedCategory !== 'all' ? selectedCategory : 'Catalog'}
+            </button>
+            {(CATEGORY_SUBCATEGORIES[selectedCategory] || facets.subCategories?.map(s => s.sub_category) || []).map((subName) => {
+              const isActive = selectedSubCategory === subName;
+              return (
+                <button
+                  key={subName}
+                  onClick={() => setSelectedSubCategory(isActive ? 'all' : subName)}
+                  className={`px-3 py-1.5 rounded-full font-bold transition shrink-0 flex items-center gap-1.5 ${
+                    isActive
+                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25 ring-2 ring-emerald-400'
+                      : 'bg-white border border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <span>{subName}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Quick Price Tier Strip */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 shrink-0 mr-1">
+              Price Tiers:
+            </span>
+            {[
+              { label: 'All Prices', val: 'all', badge: 'bg-slate-100 text-slate-700' },
+              { label: '🟢 Budget (₹199–₹999)', val: 'budget', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+              { label: '🔵 Mid-Range (₹1K–₹3K)', val: 'mid', badge: 'bg-blue-50 text-blue-700 border-blue-200' },
+              { label: '🟣 Premium (₹3K–₹10K)', val: 'premium', badge: 'bg-purple-50 text-purple-700 border-purple-200' },
+              { label: '🟡 Luxury / Bridal (₹10K+)', val: 'luxury', badge: 'bg-amber-50 text-amber-800 border-amber-200' }
+            ].map(tier => {
+              const isActive = priceRange === tier.val;
+              return (
+                <button
+                  key={tier.val}
+                  onClick={() => setPriceRange(isActive && tier.val !== 'all' ? 'all' : tier.val)}
+                  className={`px-3 py-1 rounded-full font-bold text-[11px] transition shrink-0 border ${
+                    isActive
+                      ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
+                      : `${tier.badge} hover:opacity-90`
+                  }`}
+                >
+                  {tier.label}
+                </button>
+              );
+            })}
+
+            {/* Quick Gender Filter */}
+            <div className="hidden sm:flex items-center gap-1 ml-auto pl-3 border-l border-slate-200 shrink-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase mr-1">Gender:</span>
+              {['all', 'Men', 'Women', 'Unisex'].map(g => (
+                <button
+                  key={g}
+                  onClick={() => setSelectedGender(g)}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase transition ${
+                    selectedGender === g
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  {g}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -287,10 +534,10 @@ export default function HomePage({
                 <div className="space-y-1.5 text-xs font-medium text-slate-700">
                   {[
                     { label: 'All Prices', val: 'all' },
-                    { label: 'Under ₹999', val: 'under999' },
-                    { label: '₹1,000 - ₹2,499', val: '1000to2499' },
-                    { label: '₹2,500 - ₹5,000', val: '2500to5000' },
-                    { label: 'Above ₹5,000', val: 'over5000' }
+                    { label: '🟢 Budget Store (₹199 – ₹999)', val: 'budget' },
+                    { label: '🔵 Mid-Range (₹1,000 – ₹2,999)', val: 'mid' },
+                    { label: '🟣 Premium (₹3,000 – ₹9,999)', val: 'premium' },
+                    { label: '🟡 Luxury / Bridal (₹10,000+)', val: 'luxury' }
                   ].map(p => (
                     <label key={p.val} className="flex items-center gap-2 cursor-pointer hover:text-emerald-600">
                       <input
@@ -384,6 +631,59 @@ export default function HomePage({
                   ))}
                 </div>
               </div>
+              {/* Size Filter */}
+              <div>
+                <span className="text-xs font-black uppercase tracking-wider text-slate-800 block mb-2">
+                  Size / Fit
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {['S', 'M', 'L', 'XL', 'XXL', 'UK 7', 'UK 8', 'UK 9', 'UK 10', '128GB', '256GB'].map(s => (
+                    <button
+                      key={s}
+                      onClick={() => toggleSize(s)}
+                      className={`px-2 py-1 rounded-lg text-xs font-semibold border transition ${
+                        selectedSizes.includes(s)
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                          : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Color Filter */}
+              <div>
+                <span className="text-xs font-black uppercase tracking-wider text-slate-800 block mb-2">
+                  Color
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { name: 'Black', bg: 'bg-black' },
+                    { name: 'Blue', bg: 'bg-blue-600' },
+                    { name: 'White', bg: 'bg-white border-slate-300' },
+                    { name: 'Red', bg: 'bg-red-600' },
+                    { name: 'Green', bg: 'bg-emerald-600' },
+                    { name: 'Grey', bg: 'bg-slate-500' },
+                    { name: 'Tan', bg: 'bg-amber-700' },
+                    { name: 'Gold', bg: 'bg-amber-400' }
+                  ].map(c => (
+                    <button
+                      key={c.name}
+                      onClick={() => toggleColor(c.name)}
+                      className={`px-2 py-1 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition ${
+                        selectedColors.includes(c.name)
+                          ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                          : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      <span className={`w-2.5 h-2.5 rounded-full ${c.bg} border border-black/10 inline-block`} />
+                      <span>{c.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </aside>
 
@@ -394,7 +694,7 @@ export default function HomePage({
                 <RefreshCw className="w-8 h-8 text-emerald-600 animate-spin" />
                 <p className="text-xs font-bold text-slate-500">Loading BUYNEST catalog...</p>
               </div>
-            ) : products.length === 0 ? (
+            ) : displayedProducts.length === 0 ? (
               <div className="h-96 flex flex-col items-center justify-center text-center p-8 bg-white rounded-3xl border border-slate-200 space-y-4">
                 <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 text-2xl font-bold">
                   🔍
@@ -414,7 +714,7 @@ export default function HomePage({
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
-                {products.map(product => (
+                {displayedProducts.map(product => (
                   <ProductCard
                     key={product.product_id}
                     product={product}
@@ -423,6 +723,9 @@ export default function HomePage({
                 ))}
               </div>
             )}
+
+            {/* Recently Viewed Carousel */}
+            <RecentlyViewed onSelectProduct={onSelectProduct} />
           </div>
         </div>
       </div>
@@ -447,10 +750,10 @@ export default function HomePage({
                   <div className="space-y-1.5 text-xs">
                     {[
                       { label: 'All Prices', val: 'all' },
-                      { label: 'Under ₹999', val: 'under999' },
-                      { label: '₹1,000 - ₹2,499', val: '1000to2499' },
-                      { label: '₹2,500 - ₹5,000', val: '2500to5000' },
-                      { label: 'Above ₹5,000', val: 'over5000' }
+                      { label: '🟢 Budget Store (₹199 – ₹999)', val: 'budget' },
+                      { label: '🔵 Mid-Range (₹1,000 – ₹2,999)', val: 'mid' },
+                      { label: '🟣 Premium (₹3,000 – ₹9,999)', val: 'premium' },
+                      { label: '🟡 Luxury / Bridal (₹10,000+)', val: 'luxury' }
                     ].map(p => (
                       <label key={p.val} className="flex items-center gap-2">
                         <input
@@ -504,6 +807,20 @@ export default function HomePage({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Floating Comparison Drawer Launcher */}
+      {comparedProducts.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-40 animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <button
+            onClick={() => setIsCompareModalOpen(true)}
+            className="flex items-center gap-2.5 px-5 py-3 bg-slate-900 hover:bg-emerald-600 text-white text-xs font-black rounded-2xl shadow-xl shadow-slate-900/40 transition-all hover:scale-105 active:scale-95 group"
+          >
+            <span className="text-base group-hover:rotate-12 transition-transform">⚖️</span>
+            <span>Compare ({comparedProducts.length}) Products</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping ml-1"></span>
+          </button>
         </div>
       )}
     </div>

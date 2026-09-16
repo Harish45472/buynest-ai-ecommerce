@@ -12,6 +12,7 @@ const cartController = require('./controllers/cartController');
 const orderController = require('./controllers/orderController');
 const adminController = require('./controllers/adminController');
 const wishlistController = require('./controllers/wishlistController');
+const paymentRoutes = require('./routes/payments');
 const aiService = require('./services/aiService');
 const db = require('./db/database');
 
@@ -21,6 +22,12 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve static product image assets
+const productsPath = path.join(__dirname, '../client/public/products');
+if (fs.existsSync(productsPath)) {
+  app.use('/products', express.static(productsPath));
+}
 
 // Health Check
 app.get('/api/health', (req, res) => {
@@ -35,6 +42,7 @@ app.get('/api/auth/me', verifyToken, authController.getMe);
 
 // --- Product Routes ---
 app.get('/api/products/facets', productController.getFacets);
+app.get('/api/products/search-suggestions', productController.getSearchSuggestions);
 app.get('/api/products/:id/bundle', productController.getBundle);
 app.get('/api/products', productController.getProducts);
 app.get('/api/products/:id', productController.getProductById);
@@ -63,6 +71,10 @@ app.delete('/api/cart', verifyToken, cartController.clearCart);
 app.post('/api/orders', verifyToken, orderController.createOrder);
 app.get('/api/orders', verifyToken, orderController.getUserOrders);
 app.get('/api/orders/:id', verifyToken, orderController.getOrderById);
+app.post('/api/orders/:id/cancel', verifyToken, orderController.cancelOrder);
+
+// --- Payment Routes (Razorpay & UPI) ---
+app.use('/api/payments', paymentRoutes);
 
 // --- Admin Order & Stats Routes ---
 app.get('/api/admin/orders', verifyToken, requireAdmin, orderController.getAllOrders);

@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { X, Star, ShoppingBag, Check, AlertTriangle, Sparkles, ShieldCheck, Truck, RotateCcw, Heart, Plus, MapPin } from 'lucide-react';
+import { X, Star, ShoppingBag, Check, AlertTriangle, Sparkles, ShieldCheck, Truck, RotateCcw, Heart, Plus, MapPin, ZoomIn } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { getCategoryFallback, handleImageError } from '../utils/imageFallback';
 import productService from '../api/productService';
+
+const getImgUrl = (img) => {
+  if (!img) return '';
+  if (typeof img === 'string') return img;
+  if (typeof img === 'object' && img.url) return img.url;
+  return '';
+};
 
 export default function ProductDetailModal({ product, onClose, onSelectProduct }) {
   const { addToCart } = useCart();
@@ -19,11 +27,19 @@ export default function ProductDetailModal({ product, onClose, onSelectProduct }
   const [loadingBundle, setLoadingBundle] = useState(false);
   const [bundleAdded, setBundleAdded] = useState(false);
 
+  const [zoomStyle, setZoomStyle] = useState({});
+  const [isZoomed, setIsZoomed] = useState(false);
+
+  const variants = Array.isArray(product?.variants) 
+    ? product.variants 
+    : (typeof product?.variants === 'string' ? JSON.parse(product.variants || '[]') : []);
+
   useEffect(() => {
     setQuantity(1);
     setBundleAdded(false);
     if (product) {
-      setSelectedImage(product.image_url || (product.images && product.images[0]));
+      const firstImg = product.images?.[0] || product.image_url;
+      setSelectedImage(getImgUrl(firstImg));
       const sizes = Array.isArray(product.sizes) ? product.sizes : (typeof product.sizes === 'string' ? JSON.parse(product.sizes || '["Standard"]') : ['Standard']);
       const colors = Array.isArray(product.colors) ? product.colors : (typeof product.colors === 'string' ? JSON.parse(product.colors || '["Default"]') : ['Default']);
       setSelectedSize(sizes[0] || 'Standard');
@@ -56,13 +72,26 @@ export default function ProductDetailModal({ product, onClose, onSelectProduct }
 
   if (!product) return null;
 
-  const wishlisted = isWishlisted(product.product_id);
-  const isOutOfStock = product.stock <= 0;
-  const isLowStock = product.stock > 0 && product.stock <= 5;
+  const activeVariant = variants.find(v => 
+    (v.color === selectedColor || !selectedColor) && 
+    (v.size === selectedSize || !selectedSize)
+  ) || variants.find(v => v.color === selectedColor) || variants[0] || null;
 
-  const images = Array.isArray(product.images) && product.images.length > 0 
-    ? product.images 
-    : [product.image_url || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&q=80'];
+  const currentPrice = activeVariant?.price ?? product.price;
+  const currentStock = activeVariant?.stock ?? product.stock;
+  const currentSku = activeVariant?.sku || product.sku;
+
+  const wishlisted = isWishlisted(product.product_id);
+  const isOutOfStock = currentStock <= 0;
+  const isLowStock = currentStock > 0 && currentStock <= 5;
+
+  const activeColorVariant = variants.find(v => v.color === selectedColor) || activeVariant;
+
+  const currentGallery = (activeColorVariant && Array.isArray(activeColorVariant.images) && activeColorVariant.images.length > 0)
+    ? activeColorVariant.images
+    : (Array.isArray(product.images) && product.images.length > 0 
+      ? product.images 
+      : [product.image_url || getCategoryFallback(product.category, product.sub_category)]);
 
   const sizes = Array.isArray(product.sizes) 
     ? product.sizes 
@@ -76,9 +105,42 @@ export default function ProductDetailModal({ product, onClose, onSelectProduct }
     ? product.specifications
     : (typeof product.specifications === 'string' ? JSON.parse(product.specifications || '{}') : {});
 
+  const handleMouseMove = (e) => {
+    const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((e.clientX - left) / width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - top) / height) * 100));
+    setZoomStyle({
+      transformOrigin: `${x}% ${y}%`,
+      transform: 'scale(2.2)'
+    });
+  };
+
+  const handleMouseEnter = () => setIsZoomed(true);
+  const handleMouseLeave = () => {
+    setIsZoomed(false);
+    setZoomStyle({});
+  };
+
+  const handleColorChange = (c) => {
+    setSelectedColor(c);
+    const matched = variants.find(v => v.color === c);
+    if (matched) {
+      const vImgs = Array.isArray(matched.images) && matched.images.length > 0
+        ? matched.images
+        : [matched.image_url];
+      if (vImgs[0]) {
+        setSelectedImage(getImgUrl(vImgs[0]));
+      }
+    }
+  };
+
   const handleAddToCart = () => {
     if (!isOutOfStock) {
-      addToCart(product.product_id, quantity);
+      addToCart(product.product_id, quantity, {
+        selected_color: selectedColor,
+        selected_size: selectedSize,
+        sku: currentSku
+      });
     }
   };
 
@@ -121,33 +183,54 @@ export default function ProductDetailModal({ product, onClose, onSelectProduct }
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Gallery Column */}
             <div className="space-y-3">
-              <div className="relative aspect-square bg-slate-100 rounded-2xl overflow-hidden border border-slate-200/80">
+              <div 
+                className="relative aspect-square bg-white rounded-2xl overflow-hidden border border-slate-200/80 cursor-crosshair group flex items-center justify-center"
+                onMouseMove={handleMouseMove}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+              >
                 <img
-                  src={selectedImage || product.image_url}
+                  src={getImgUrl(selectedImage) || getImgUrl(currentGallery[0]) || product.image_url}
                   alt={product.name}
-                  className="w-full h-full object-cover"
+                  onError={(e) => handleImageError(e, product.category, product.sub_category)}
+                  className="w-full h-full object-contain p-4 transition-transform duration-150 ease-out"
+                  style={isZoomed ? zoomStyle : {}}
                 />
                 {product.discount_percent > 0 && (
-                  <div className="absolute top-3 left-3 bg-emerald-600 text-white font-black text-xs px-2.5 py-1 rounded-lg shadow-sm">
+                  <div className="absolute top-3 left-3 bg-emerald-600 text-white font-black text-xs px-2.5 py-1 rounded-lg shadow-sm pointer-events-none">
                     {product.discount_percent}% OFF
                   </div>
                 )}
+                <div className="absolute bottom-2.5 right-2.5 bg-slate-900/60 backdrop-blur-md text-white text-[10px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1 pointer-events-none opacity-0 group-hover:opacity-100 transition">
+                  <ZoomIn className="w-3 h-3" /> Hover to Zoom
+                </div>
               </div>
 
               {/* Thumbnails Strip */}
-              {images.length > 1 && (
+              {currentGallery.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto pb-1">
-                  {images.map((img, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedImage(img)}
-                      className={`w-16 h-16 rounded-xl overflow-hidden border-2 shrink-0 transition ${
-                        selectedImage === img ? 'border-emerald-600 shadow-sm' : 'border-slate-200 opacity-70 hover:opacity-100'
-                      }`}
-                    >
-                      <img src={img} alt="thumbnail" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
+                  {currentGallery.map((img, idx) => {
+                    const imgUrl = getImgUrl(img);
+                    const isSelected = (getImgUrl(selectedImage) === imgUrl || (!selectedImage && idx === 0));
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedImage(imgUrl)}
+                        className={`w-16 h-16 rounded-xl overflow-hidden border-2 shrink-0 transition bg-slate-50 flex items-center justify-center p-1 ${
+                          isSelected
+                            ? 'border-emerald-600 shadow-sm scale-95' 
+                            : 'border-slate-200 opacity-70 hover:opacity-100'
+                        }`}
+                      >
+                        <img 
+                          src={imgUrl} 
+                          alt={img?.alt || `thumbnail ${idx + 1}`} 
+                          onError={(e) => handleImageError(e, product.category, product.sub_category)}
+                          className="w-full h-full object-contain" 
+                        />
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -156,12 +239,24 @@ export default function ProductDetailModal({ product, onClose, onSelectProduct }
             <div className="space-y-4">
               {/* Brand & Title */}
               <div>
-                <span className="text-xs font-black uppercase tracking-wider text-indigo-600">
-                  {product.brand || 'BUYNEST Select'}
-                </span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider text-indigo-600">
+                    {product.brand || 'BUYNEST Select'}
+                  </span>
+                  {currentSku && (
+                    <span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
+                      SKU: {currentSku}
+                    </span>
+                  )}
+                </div>
                 <h2 className="text-lg sm:text-xl font-black text-slate-900 leading-snug mt-0.5">
                   {product.name}
                 </h2>
+                {product.model && product.model !== 'Standard' && (
+                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                    Model: <span className="text-slate-700 font-semibold">{product.model}</span>
+                  </p>
+                )}
                 <div className="flex items-center gap-2 mt-2">
                   <div className="flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/60">
                     <Star className="w-3.5 h-3.5 text-amber-500 fill-current" />
@@ -173,21 +268,38 @@ export default function ProductDetailModal({ product, onClose, onSelectProduct }
                 </div>
               </div>
 
-              {/* Price Row */}
-              <div className="p-3 bg-slate-50 rounded-2xl flex items-baseline gap-2.5">
-                <span className="text-2xl font-black text-slate-900">
-                  ₹{Number(product.price).toLocaleString('en-IN')}
-                </span>
-                {product.mrp && product.mrp > product.price && (
-                  <span className="text-sm text-slate-400 line-through">
-                    MRP ₹{Number(product.mrp).toLocaleString('en-IN')}
+              {/* Price & Stock Row */}
+              <div className="p-3 bg-slate-50 rounded-2xl flex items-baseline justify-between flex-wrap gap-2">
+                <div className="flex items-baseline gap-2.5">
+                  <span className="text-2xl font-black text-slate-900">
+                    ₹{Number(currentPrice).toLocaleString('en-IN')}
                   </span>
-                )}
-                {product.discount_percent > 0 && (
-                  <span className="text-xs font-extrabold text-emerald-600">
-                    ({product.discount_percent}% OFF)
-                  </span>
-                )}
+                  {product.mrp && product.mrp > currentPrice && (
+                    <span className="text-sm text-slate-400 line-through">
+                      MRP ₹{Number(product.mrp).toLocaleString('en-IN')}
+                    </span>
+                  )}
+                  {product.discount_percent > 0 && (
+                    <span className="text-xs font-extrabold text-emerald-600">
+                      ({product.discount_percent}% OFF)
+                    </span>
+                  )}
+                </div>
+                <div>
+                  {isOutOfStock ? (
+                    <span className="text-xs font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
+                      Out of Stock
+                    </span>
+                  ) : isLowStock ? (
+                    <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3 text-amber-600" /> Only {currentStock} left!
+                    </span>
+                  ) : (
+                    <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                      In Stock ({currentStock} available)
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Size Selector */}
@@ -218,21 +330,33 @@ export default function ProductDetailModal({ product, onClose, onSelectProduct }
               {/* Color Selector */}
               {colors && colors.length > 0 && colors[0] !== 'Default' && (
                 <div>
-                  <span className="text-xs font-bold text-slate-700 block mb-1.5">Available Color / Style</span>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold text-slate-700">Available Color / Style</span>
+                    <span className="text-xs font-semibold text-emerald-600">{selectedColor}</span>
+                  </div>
                   <div className="flex flex-wrap gap-2">
-                    {colors.map((c, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setSelectedColor(c)}
-                        className={`px-3 py-1 rounded-xl text-xs font-semibold border transition ${
-                          selectedColor === c
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-500 font-bold'
-                            : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
-                        }`}
-                      >
-                        {c}
-                      </button>
-                    ))}
+                    {colors.map((c, idx) => {
+                      const varForColor = variants.find(v => v.color === c);
+                      const hex = varForColor?.color_hex || '#cbd5e1';
+                      const isSelected = selectedColor === c;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => handleColorChange(c)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition ${
+                            isSelected
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-500 font-bold shadow-xs'
+                              : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                          }`}
+                        >
+                          <span
+                            className="w-3 h-3 rounded-full border border-slate-300 inline-block shadow-2xs shrink-0"
+                            style={{ backgroundColor: hex }}
+                          />
+                          <span>{c}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -325,10 +449,27 @@ export default function ProductDetailModal({ product, onClose, onSelectProduct }
             </div>
           </div>
 
+          {/* Key Features & Highlights */}
+          {Array.isArray(product.features) && product.features.length > 0 && (
+            <div className="border-t border-slate-100 pt-5">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600" /> Key Features & Highlights
+              </h3>
+              <ul className="space-y-2 bg-emerald-50/40 border border-emerald-100/60 p-3.5 rounded-2xl">
+                {product.features.map((feat, idx) => (
+                  <li key={idx} className="text-xs text-slate-700 flex items-start gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></span>
+                    <span className="font-medium">{feat}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {/* Specifications Table */}
           {Object.keys(specs).length > 0 && (
-            <div className="border-t border-slate-100 pt-6">
-              <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-3">
+            <div className="border-t border-slate-100 pt-5">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3">
                 Product Specifications
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-2xl">

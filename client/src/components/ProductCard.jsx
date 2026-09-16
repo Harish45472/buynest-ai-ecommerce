@@ -2,14 +2,30 @@ import React from 'react';
 import { Star, ShoppingBag, Eye, Heart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import { useComparison } from '../context/ComparisonContext';
+import { getCategoryFallback, handleImageError } from '../utils/imageFallback';
 
 export default function ProductCard({ product, onSelectProduct }) {
   const { addToCart } = useCart();
   const { isWishlisted, toggleWishlist } = useWishlist();
+  const { addToCompare, removeFromCompare, isInCompare } = useComparison();
 
   const wishlisted = isWishlisted(product.product_id);
+  const compared = isInCompare(product.product_id);
   const isOutOfStock = product.stock <= 0;
   const isLowStock = product.stock > 0 && product.stock <= 5;
+
+  const handleCardClick = () => {
+    try {
+      const stored = localStorage.getItem('buynest_recently_viewed');
+      let list = stored ? JSON.parse(stored) : [];
+      list = [product, ...list.filter((p) => p.product_id !== product.product_id)].slice(0, 10);
+      localStorage.setItem('buynest_recently_viewed', JSON.stringify(list));
+    } catch (e) {
+      console.warn('Failed to save recently viewed:', e);
+    }
+    if (onSelectProduct) onSelectProduct(product);
+  };
 
   const handleQuickAdd = (e) => {
     e.stopPropagation();
@@ -23,25 +39,45 @@ export default function ProductCard({ product, onSelectProduct }) {
     toggleWishlist(product);
   };
 
+  const handleToggleCompare = (e) => {
+    e.stopPropagation();
+    if (compared) {
+      removeFromCompare(product.product_id);
+    } else {
+      addToCompare(product);
+    }
+  };
+
+  const primaryImage = (Array.isArray(product.images) && product.images.length > 0)
+    ? (product.images.find(i => typeof i === 'object' && i?.type === 'primary')?.url 
+       || (typeof product.images[0] === 'object' ? product.images[0].url : product.images[0]))
+    : (product.image_url || getCategoryFallback(product.category, product.sub_category));
+
   return (
     <div
-      onClick={() => onSelectProduct(product)}
-      className="group bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs hover:shadow-xl hover:border-slate-300 transition-all duration-300 flex flex-col cursor-pointer relative"
+      onClick={handleCardClick}
+      className="group bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs hover:shadow-xl hover:border-emerald-500/30 hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer relative"
     >
       {/* Image Container */}
-      <div className="relative aspect-square w-full overflow-hidden bg-slate-100">
+      <div className="product-image relative aspect-square w-full bg-white overflow-hidden flex items-center justify-center border-b border-slate-100">
         <img
-          src={product.image_url || (product.images && product.images[0]) || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&q=80'}
+          src={primaryImage}
           alt={product.name}
-          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+          onError={(e) => handleImageError(e, product.category, product.sub_category)}
+          className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
         />
 
-        {/* Category Pill */}
+        {/* Category & Discount Pills */}
         <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
-          <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-white/95 backdrop-blur-md text-slate-900 rounded-full shadow-xs">
+          <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-white/95 backdrop-blur-md text-slate-900 rounded-full shadow-xs border border-slate-200/50">
             {product.category}
           </span>
+          {product.discount_percent > 0 && (
+            <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-rose-600 text-white rounded-md shadow-xs w-fit">
+              {product.discount_percent}% OFF
+            </span>
+          )}
           {product.sub_category && product.sub_category !== 'General' && (
             <span className="px-1.5 py-0.5 text-[8px] font-bold bg-slate-900/85 text-white rounded-md shadow-xs w-fit">
               {product.sub_category}
@@ -49,18 +85,33 @@ export default function ProductCard({ product, onSelectProduct }) {
           )}
         </div>
 
-        {/* Wishlist Heart Button */}
-        <button
-          onClick={handleToggleWishlist}
-          className={`absolute top-2.5 right-2.5 z-10 w-8 h-8 rounded-full flex items-center justify-center transition-transform active:scale-90 shadow-sm ${
-            wishlisted
-              ? 'bg-rose-50 text-rose-600 border border-rose-200'
-              : 'bg-white/90 backdrop-blur-md text-slate-400 hover:text-rose-500 hover:bg-white'
-          }`}
-          title={wishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
-        >
-          <Heart className={`w-4 h-4 ${wishlisted ? 'fill-rose-500 text-rose-500' : ''}`} />
-        </button>
+        {/* Action Buttons: Wishlist & Compare */}
+        <div className="absolute top-2.5 right-2.5 z-10 flex flex-col gap-1.5">
+          <button
+            onClick={handleToggleWishlist}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform active:scale-90 shadow-sm ${
+              wishlisted
+                ? 'bg-rose-50 text-rose-600 border border-rose-200'
+                : 'bg-white/90 backdrop-blur-md text-slate-400 hover:text-rose-500 hover:bg-white'
+            }`}
+            title={wishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+          >
+            <Heart className={`w-4 h-4 ${wishlisted ? 'fill-rose-500 text-rose-500' : ''}`} />
+          </button>
+
+          <button
+            onClick={handleToggleCompare}
+            className={`px-2 py-1 rounded-full text-[10px] font-bold flex items-center gap-1 transition-all shadow-sm ${
+              compared
+                ? 'bg-emerald-600 text-white shadow-emerald-600/30'
+                : 'bg-white/90 backdrop-blur-md text-slate-600 hover:bg-white hover:text-emerald-700'
+            }`}
+            title={compared ? 'Remove from Compare' : 'Add to Compare'}
+          >
+            <span>⚖️</span>
+            <span>{compared ? 'Added' : 'Compare'}</span>
+          </button>
+        </div>
 
         {/* Stock Badge */}
         {isOutOfStock ? (
@@ -111,6 +162,44 @@ export default function ProductCard({ product, onSelectProduct }) {
           <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">
             {product.description}
           </p>
+
+          {/* Consolidated Color Variants */}
+          {Array.isArray(product.colors) && product.colors.length > 1 && (
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              <span className="text-[9px] font-bold text-slate-400">Colors:</span>
+              <div className="flex items-center gap-1">
+                {product.colors.slice(0, 4).map((col, idx) => {
+                  const lower = col.toLowerCase();
+                  const bg = lower.includes('black') ? '#0f172a'
+                    : lower.includes('white') ? '#ffffff'
+                    : lower.includes('navy') ? '#1e3a8a'
+                    : lower.includes('blue') ? '#2563eb'
+                    : lower.includes('red') || lower.includes('crimson') || lower.includes('maroon') ? '#dc2626'
+                    : lower.includes('green') || lower.includes('olive') ? '#15803d'
+                    : lower.includes('pink') ? '#ec4899'
+                    : lower.includes('yellow') ? '#ca8a04'
+                    : lower.includes('grey') || lower.includes('gray') ? '#64748b'
+                    : lower.includes('gold') ? '#eab308'
+                    : lower.includes('silver') ? '#cbd5e1'
+                    : '#94a3b8';
+
+                  return (
+                    <span
+                      key={idx}
+                      title={col}
+                      className="w-2.5 h-2.5 rounded-full border border-slate-300 shadow-2xs inline-block"
+                      style={{ backgroundColor: bg }}
+                    />
+                  );
+                })}
+                {product.colors.length > 4 && (
+                  <span className="text-[9px] font-extrabold text-slate-500">
+                    +{product.colors.length - 4}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Price & Cart Action */}

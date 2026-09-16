@@ -10,6 +10,9 @@ exports.getCart = (req, res) => {
         c.user_id,
         c.product_id,
         c.quantity,
+        c.selected_color,
+        c.selected_size,
+        c.sku,
         c.updated_at,
         p.name,
         p.category,
@@ -41,7 +44,7 @@ exports.getCart = (req, res) => {
 exports.addToCart = (req, res) => {
   try {
     const userId = req.user.user_id;
-    const { product_id, quantity = 1 } = req.body;
+    const { product_id, quantity = 1, selected_color = null, selected_size = null, sku = null } = req.body;
 
     const addQty = parseInt(quantity, 10) || 1;
     if (addQty <= 0) {
@@ -58,8 +61,11 @@ exports.addToCart = (req, res) => {
     }
 
     const existingItem = db.prepare(`
-      SELECT * FROM cart WHERE user_id = ? AND product_id = ?
-    `).get(userId, product_id);
+      SELECT * FROM cart 
+      WHERE user_id = ? AND product_id = ? 
+        AND (selected_color = ? OR (selected_color IS NULL AND ? IS NULL))
+        AND (selected_size = ? OR (selected_size IS NULL AND ? IS NULL))
+    `).get(userId, product_id, selected_color, selected_color, selected_size, selected_size);
 
     const currentQtyInCart = existingItem ? existingItem.quantity : 0;
     const newQty = currentQtyInCart + addQty;
@@ -78,9 +84,9 @@ exports.addToCart = (req, res) => {
       `).run(newQty, existingItem.cart_id);
     } else {
       db.prepare(`
-        INSERT INTO cart (user_id, product_id, quantity)
-        VALUES (?, ?, ?)
-      `).run(userId, product_id, newQty);
+        INSERT INTO cart (user_id, product_id, quantity, selected_color, selected_size, sku)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(userId, product_id, newQty, selected_color, selected_size, sku);
     }
 
     return exports.getCart(req, res);

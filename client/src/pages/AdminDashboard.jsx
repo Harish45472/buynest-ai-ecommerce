@@ -421,7 +421,7 @@ export default function AdminDashboard({ onBackToShopping }) {
           {/* Status filter bar */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-slate-400 uppercase">Filter Status:</span>
-            {['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'].map(st => (
+            {['all', 'confirmed', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'].map(st => (
               <button
                 key={st}
                 onClick={() => setOrderStatusFilter(st)}
@@ -431,7 +431,7 @@ export default function AdminDashboard({ onBackToShopping }) {
                     : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                 }`}
               >
-                {st}
+                {st.replace(/_/g, ' ')}
               </button>
             ))}
           </div>
@@ -476,18 +476,22 @@ export default function AdminDashboard({ onBackToShopping }) {
                           className={`px-2.5 py-1 rounded-lg text-xs font-bold border focus:outline-none cursor-pointer ${
                             ord.status === 'delivered'
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                              : ord.status === 'out_for_delivery'
+                              ? 'bg-cyan-50 text-cyan-700 border-cyan-300'
                               : ord.status === 'shipped'
                               ? 'bg-indigo-50 text-indigo-700 border-indigo-300'
                               : ord.status === 'processing'
                               ? 'bg-amber-50 text-amber-800 border-amber-300'
                               : ord.status === 'cancelled'
                               ? 'bg-rose-50 text-rose-700 border-rose-300'
-                              : 'bg-slate-100 text-slate-700 border-slate-300'
+                              : 'bg-blue-50 text-blue-700 border-blue-300'
                           }`}
                         >
                           <option value="pending">Pending</option>
+                          <option value="confirmed">Confirmed</option>
                           <option value="processing">Processing</option>
                           <option value="shipped">Shipped</option>
+                          <option value="out_for_delivery">Out for Delivery</option>
                           <option value="delivered">Delivered</option>
                           <option value="cancelled">Cancelled</option>
                         </select>

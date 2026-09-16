@@ -9,21 +9,132 @@ function formatProduct(p) {
     sizes: p.sizes ? (typeof p.sizes === 'string' ? JSON.parse(p.sizes) : p.sizes) : ['Standard'],
     colors: p.colors ? (typeof p.colors === 'string' ? JSON.parse(p.colors) : p.colors) : ['Default'],
     specifications: p.specifications ? (typeof p.specifications === 'string' ? JSON.parse(p.specifications) : p.specifications) : {},
-    tags: p.tags ? (typeof p.tags === 'string' ? JSON.parse(p.tags) : p.tags) : []
+    features: p.features ? (typeof p.features === 'string' ? JSON.parse(p.features) : p.features) : [],
+    tags: p.tags ? (typeof p.tags === 'string' ? JSON.parse(p.tags) : p.tags) : [],
+    variants: p.variants ? (typeof p.variants === 'string' ? JSON.parse(p.variants) : p.variants) : []
+  };
+}
+
+// Natural language search query parser
+function parseSearchQuery(rawQuery) {
+  if (!rawQuery || typeof rawQuery !== 'string') {
+    return { tokens: [], extractedMaxPrice: null, extractedMinPrice: null, detectedGender: null };
+  }
+
+  let text = rawQuery.trim().toLowerCase();
+  let extractedMaxPrice = null;
+  let extractedMinPrice = null;
+  let detectedGender = null;
+
+  // 1. Price: "under 3000", "below 5000", "under rs 2000", "less than 1500"
+  const underMatch = text.match(/\b(?:under|below|less\s+than)\s*(?:rs\.?|inr|₹)?\s*(\d+[\d,]*)\b/i);
+  if (underMatch) {
+    extractedMaxPrice = parseInt(underMatch[1].replace(/,/g, ''), 10);
+    text = text.replace(underMatch[0], ' ');
+  }
+
+  // 2. Price: "above 2000", "over 1000", "more than 2500"
+  const aboveMatch = text.match(/\b(?:above|over|more\s+than)\s*(?:rs\.?|inr|₹)?\s*(\d+[\d,]*)\b/i);
+  if (aboveMatch) {
+    extractedMinPrice = parseInt(aboveMatch[1].replace(/,/g, ''), 10);
+    text = text.replace(aboveMatch[0], ' ');
+  }
+
+  // 3. Price: "between 1000 and 3000"
+  const betweenMatch = text.match(/\b(?:between)\s*(?:rs\.?|inr|₹)?\s*(\d+[\d,]*)\s*(?:and|to|-)\s*(?:rs\.?|inr|₹)?\s*(\d+[\d,]*)\b/i);
+  if (betweenMatch) {
+    extractedMinPrice = parseInt(betweenMatch[1].replace(/,/g, ''), 10);
+    extractedMaxPrice = parseInt(betweenMatch[2].replace(/,/g, ''), 10);
+    text = text.replace(betweenMatch[0], ' ');
+  }
+
+  // 4. Gender mentions
+  if (/\b(men|mens|male|gentlemen)\b/i.test(text)) {
+    detectedGender = 'Men';
+  } else if (/\b(women|womens|ladies|female)\b/i.test(text)) {
+    detectedGender = 'Women';
+  } else if (/\b(kids|boys|girls|children)\b/i.test(text)) {
+    detectedGender = 'Kids';
+  }
+
+  // Normalize common variations
+  text = text.replace(/\bt[\s-]+shirts?\b/gi, 't-shirt');
+  text = text.replace(/\btshirts?\b/gi, 't-shirt');
+  text = text.replace(/\btees?\b/gi, 't-shirt');
+  text = text.replace(/[’']/g, '');
+
+  // 5. Clean up remaining tokens
+  const stopWords = new Set(['for', 'with', 'in', 'and', 'of', 'the', 'a', 'an', 'all', 'best', 'buy', 'shop', 'online']);
+  const tokens = text
+    .replace(/[^\w\s-]/g, ' ')
+    .split(/\s+/)
+    .map(t => t.trim().toLowerCase())
+    .filter(t => t.length > 0 && !stopWords.has(t));
+
+  return {
+    tokens,
+    extractedMaxPrice,
+    extractedMinPrice,
+    detectedGender
   };
 }
 
 exports.getProducts = (req, res) => {
   try {
-    const { q, category, sub_category, brands, minPrice, maxPrice, minRating, gender, inStock, sortBy } = req.query;
+    const rawSearch = req.query.q || req.query.search || '';
+    const { category, sub_category, brands, minRating, inStock, sortBy, limit } = req.query;
+    let minPrice = req.query.minPrice;
+    let maxPrice = req.query.maxPrice;
+    let gender = req.query.gender;
 
     let query = 'SELECT * FROM products WHERE 1=1';
     const params = [];
 
-    if (q && q.trim()) {
-      const searchTerm = `%${q.trim().toLowerCase()}%`;
-      query += ' AND (LOWER(name) LIKE ? OR LOWER(brand) LIKE ? OR LOWER(category) LIKE ? OR LOWER(sub_category) LIKE ? OR LOWER(description) LIKE ? OR LOWER(tags) LIKE ?)';
-      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+    // Smart natural language search
+    if (rawSearch && rawSearch.trim()) {
+      const parsed = parseSearchQuery(rawSearch);
+
+      if (parsed.extractedMaxPrice && (!maxPrice || isNaN(Number(maxPrice)))) {
+        maxPrice = parsed.extractedMaxPrice;
+      }
+      if (parsed.extractedMinPrice && (!minPrice || isNaN(Number(minPrice)))) {
+        minPrice = parsed.extractedMinPrice;
+      }
+      if (parsed.detectedGender && (!gender || gender === 'all')) {
+        gender = parsed.detectedGender;
+      }
+
+      // If tokens exist, match ALL tokens across searchable fields
+      if (parsed.tokens.length > 0) {
+        parsed.tokens.forEach(token => {
+          const root = (token.endsWith('es') && token.length > 4) 
+            ? token.slice(0, -2) 
+            : (token.endsWith('s') && token.length > 3 && !token.endsWith('ss')) 
+            ? token.slice(0, -1) 
+            : token;
+
+          const pattern = `%${token}%`;
+          const rootPattern = `%${root}%`;
+
+          query += ` AND (
+            REPLACE(REPLACE(LOWER(name), '’', ''), "'", '') LIKE ? OR 
+            REPLACE(REPLACE(LOWER(brand), '’', ''), "'", '') LIKE ? OR 
+            REPLACE(REPLACE(LOWER(brand), '’', ''), "'", '') LIKE ? OR 
+            LOWER(category) LIKE ? OR 
+            LOWER(sub_category) LIKE ? OR 
+            LOWER(sub_category) LIKE ? OR 
+            LOWER(description) LIKE ? OR 
+            LOWER(colors) LIKE ? OR 
+            LOWER(sizes) LIKE ? OR 
+            LOWER(specifications) LIKE ? OR 
+            LOWER(tags) LIKE ? OR
+            LOWER(model) LIKE ? OR
+            LOWER(sku) LIKE ? OR
+            LOWER(variants) LIKE ?
+          )`;
+          params.push(pattern, pattern, rootPattern, pattern, pattern, rootPattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern, pattern);
+        });
+      }
     }
 
     if (category && category !== 'all') {
@@ -87,8 +198,21 @@ exports.getProducts = (req, res) => {
         query += ' ORDER BY is_popular DESC, reviews_count DESC, rating DESC';
         break;
       default:
-        query += ' ORDER BY featured DESC, is_popular DESC, rating DESC, product_id DESC';
+        query += ` ORDER BY 
+          CASE 
+            WHEN LOWER(category) IN ('men', 'women') AND LOWER(sub_category) IN ('shirts', 't-shirts') THEN 1
+            WHEN LOWER(category) IN ('men', 'women') AND LOWER(sub_category) IN ('dresses', 'kurtis', 'jeans', 'tops', 'trousers', 'hoodies', 'jackets', 'ethnic wear', 'formal wear') THEN 2
+            WHEN LOWER(category) IN ('men', 'women') THEN 3
+            WHEN LOWER(category) = 'kids' THEN 4
+            ELSE 5
+          END ASC,
+          featured DESC, is_popular DESC, rating DESC, product_id ASC`;
         break;
+    }
+
+    if (limit && !isNaN(Number(limit))) {
+      query += ' LIMIT ?';
+      params.push(Number(limit));
     }
 
     const rows = db.prepare(query).all(...params);
@@ -97,6 +221,116 @@ exports.getProducts = (req, res) => {
   } catch (err) {
     console.error('getProducts error:', err);
     res.status(500).json({ error: 'Failed to fetch products.' });
+  }
+};
+
+exports.getSearchSuggestions = (req, res) => {
+  try {
+    const rawSearch = (req.query.q || req.query.search || '').trim();
+
+    const trendingQueries = [
+      'Oversized T-Shirts',
+      'Running Shoes under 3000',
+      'Levi\'s Slim Jeans',
+      'Smartwatches',
+      'Wireless Earbuds',
+      'Casual Linen Shirts',
+      'Women Sarees under 5000',
+      'Noise Cancelling Headphones'
+    ];
+
+    const popularCategories = [
+      'Men',
+      'Women',
+      'Electronics',
+      'Sports & Fitness',
+      'Home & Kitchen',
+      'Beauty & Personal Care'
+    ];
+
+    const popularBrands = [
+      'Nike',
+      "Levi's",
+      'Puma',
+      'Roadster',
+      'Zara',
+      'Apple',
+      'boAt',
+      'Biba',
+      'Philips'
+    ];
+
+    if (!rawSearch || rawSearch.length < 2) {
+      return res.json({
+        trendingQueries,
+        popularCategories,
+        popularBrands,
+        products: [],
+        subcategories: []
+      });
+    }
+
+    // Find matching products
+    const parsed = parseSearchQuery(rawSearch);
+    let query = 'SELECT product_id, name, brand, category, sub_category, price, mrp, image_url, rating FROM products WHERE 1=1';
+    const params = [];
+    if (parsed.tokens.length > 0) {
+      parsed.tokens.forEach(token => {
+        const root = (token.endsWith('es') && token.length > 4) 
+          ? token.slice(0, -2) 
+          : (token.endsWith('s') && token.length > 3 && !token.endsWith('ss')) 
+          ? token.slice(0, -1) 
+          : token;
+
+        const pattern = `%${token}%`;
+        const rootPattern = `%${root}%`;
+
+        query += ` AND (
+          REPLACE(REPLACE(LOWER(name), '’', ''), "'", '') LIKE ? OR 
+          REPLACE(REPLACE(LOWER(brand), '’', ''), "'", '') LIKE ? OR 
+          REPLACE(REPLACE(LOWER(brand), '’', ''), "'", '') LIKE ? OR 
+          LOWER(category) LIKE ? OR 
+          LOWER(sub_category) LIKE ? OR 
+          LOWER(sub_category) LIKE ? OR 
+          LOWER(colors) LIKE ? OR 
+          LOWER(tags) LIKE ?
+        )`;
+        params.push(pattern, pattern, rootPattern, pattern, pattern, rootPattern, pattern, pattern);
+      });
+    } else {
+      const pattern = `%${rawSearch.toLowerCase()}%`;
+      query += ` AND (LOWER(name) LIKE ? OR LOWER(brand) LIKE ? OR LOWER(category) LIKE ?)`;
+      params.push(pattern, pattern, pattern);
+    }
+
+    if (parsed.extractedMaxPrice) {
+      query += ' AND price <= ?';
+      params.push(parsed.extractedMaxPrice);
+    }
+
+    query += ' ORDER BY rating DESC, is_popular DESC LIMIT 6';
+    const products = db.prepare(query).all(...params);
+
+    // Matching subcategories
+    const subQuery = `
+      SELECT DISTINCT sub_category 
+      FROM products 
+      WHERE LOWER(sub_category) LIKE ? OR LOWER(name) LIKE ?
+      LIMIT 4
+    `;
+    const subRows = db.prepare(subQuery).all(`%${rawSearch.toLowerCase()}%`, `%${rawSearch.toLowerCase()}%`);
+    const subcategories = subRows.map(r => r.sub_category);
+
+    res.json({
+      trendingQueries,
+      popularCategories,
+      popularBrands,
+      products,
+      subcategories
+    });
+  } catch (err) {
+    console.error('getSearchSuggestions error:', err);
+    res.status(500).json({ error: 'Failed to fetch search suggestions.' });
   }
 };
 

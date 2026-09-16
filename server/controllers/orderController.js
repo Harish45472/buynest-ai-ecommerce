@@ -19,7 +19,7 @@ exports.createOrder = (req, res) => {
     const checkoutTx = db.transaction(() => {
       // 1. Get user cart items
       const cartItems = db.prepare(`
-        SELECT c.cart_id, c.product_id, c.quantity, p.name, p.price, p.stock
+        SELECT c.cart_id, c.product_id, c.quantity, c.selected_color, c.selected_size, c.sku, p.name, p.price, p.stock
         FROM cart c
         JOIN products p ON c.product_id = p.product_id
         WHERE c.user_id = ?
@@ -39,20 +39,21 @@ exports.createOrder = (req, res) => {
       // 3. Calculate total amount (Free shipping over ₹999, else ₹99)
       const subtotal = cartItems.reduce((sum, item) => sum + (item.quantity * item.price), 0);
       const shippingFee = subtotal >= 999 ? 0 : 99;
+      const taxAmount = Math.round(subtotal * 0.18);
       const totalAmount = Number((subtotal + shippingFee).toFixed(2));
 
       // 4. Create Order record
       const orderInsert = db.prepare(`
-        INSERT INTO orders (user_id, total_amount, status, shipping_name, shipping_address, shipping_city, shipping_postal, payment_method)
-        VALUES (?, ?, 'pending', ?, ?, ?, ?, ?)
-      `).run(userId, totalAmount, shipping_name.trim(), shipping_address.trim(), shipping_city.trim(), shipping_postal.trim(), payment_method);
+        INSERT INTO orders (user_id, total_amount, status, shipping_name, shipping_address, shipping_city, shipping_postal, payment_method, subtotal, tax_amount, delivery_fee, discount_amount)
+        VALUES (?, ?, 'confirmed', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(userId, totalAmount, shipping_name.trim(), shipping_address.trim(), shipping_city.trim(), shipping_postal.trim(), payment_method, subtotal, taxAmount, shippingFee, 0);
 
       const orderId = orderInsert.lastInsertRowid;
 
-      // 5. Deduct inventory and insert order items
+      // 5. Deduct inventory and insert order items with variant details
       const insertOrderItem = db.prepare(`
-        INSERT INTO order_items (order_id, product_id, quantity, price)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO order_items (order_id, product_id, quantity, price, selected_color, selected_size, sku)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
 
       const deductStock = db.prepare(`
@@ -61,7 +62,15 @@ exports.createOrder = (req, res) => {
 
       for (const item of cartItems) {
         deductStock.run(item.quantity, item.product_id);
-        insertOrderItem.run(orderId, item.product_id, item.quantity, item.price);
+        insertOrderItem.run(
+          orderId, 
+          item.product_id, 
+          item.quantity, 
+          item.price,
+          item.selected_color || null,
+          item.selected_size || null,
+          item.sku || null
+        );
       }
 
       // 6. Clear cart
@@ -203,7 +212,7 @@ exports.updateOrderStatus = (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
     }
@@ -229,5 +238,76 @@ exports.updateOrderStatus = (req, res) => {
   } catch (err) {
     console.error('updateOrderStatus error:', err);
     res.status(500).json({ error: 'Failed to update order status.' });
+  }
+};
+
+exports.cancelOrder = (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason = 'Customer requested cancellation' } = req.body;
+    const userId = req.user?.user_id || req.user?.userId;
+    const isAdmin = req.user?.role === 'admin';
+
+    // 1. Fetch order
+    const order = db.prepare('SELECT * FROM orders WHERE order_id = ?').get(id);
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found.' });
+    }
+
+    // 2. Authorization check: Customer can only cancel their own order, Admin can cancel any
+    if (!isAdmin && String(order.user_id) !== String(userId)) {
+      return res.status(403).json({ error: 'You are not authorized to cancel this order.' });
+    }
+
+    // 3. Status check: Only allow cancellation for confirmed, pending, or processing
+    if (order.status === 'cancelled') {
+      return res.status(400).json({ error: 'This order has already been cancelled.' });
+    }
+
+    const nonCancellableStatuses = ['shipped', 'out_for_delivery', 'delivered'];
+    if (nonCancellableStatuses.includes(order.status)) {
+      return res.status(400).json({
+        error: `Order #${id} is already '${order.status.replace(/_/g, ' ')}' and cannot be cancelled online. Please initiate a return upon delivery.`
+      });
+    }
+
+    // 4. Atomic transaction: Restore inventory and update order status
+    const cancelTx = db.transaction(() => {
+      // Restore inventory stock for all order items
+      const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(id);
+      const restoreStock = db.prepare('UPDATE products SET stock = stock + ? WHERE product_id = ?');
+      for (const item of items) {
+        restoreStock.run(item.quantity, item.product_id);
+      }
+
+      // Update order status and refund status
+      const isPaid = order.payment_status === 'paid' || !!order.razorpay_payment_id;
+      const newPaymentStatus = isPaid ? 'refund_initiated' : order.payment_status;
+
+      db.prepare(`
+        UPDATE orders 
+        SET status = 'cancelled', 
+            payment_status = ?
+        WHERE order_id = ?
+      `).run(newPaymentStatus, id);
+    });
+
+    cancelTx();
+
+    const updated = db.prepare('SELECT * FROM orders WHERE order_id = ?').get(id);
+    const isPaid = order.payment_status === 'paid' || !!order.razorpay_payment_id;
+
+    res.json({
+      success: true,
+      message: `Order #${id} has been cancelled successfully.`,
+      reason,
+      refund_info: isPaid
+        ? `Refund of ₹${Number(order.total_amount).toLocaleString('en-IN')} has been initiated to your original payment method (Razorpay / UPI / Card). It will reflect in your account within 3–5 business days.`
+        : 'Since this order was placed with Cash on Delivery, no deduction took place.',
+      order: updated
+    });
+  } catch (err) {
+    console.error('cancelOrder error:', err);
+    res.status(500).json({ error: 'Failed to cancel order.' });
   }
 };

@@ -3,20 +3,25 @@ import { ShoppingBag, Sparkles, Search, User, LogOut, ShieldCheck, ClipboardList
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
+import SearchSuggestions from './SearchSuggestions';
 
-// Mega Menu Department & Subcategory Structure for BUYNEST
+// Mega Menu Department & Subcategory Structure for BUYNEST (All 76 Subcategories)
 export const MEGA_MENU_DATA = {
   'Men': {
     accent: 'text-rose-600',
     border: 'border-b-2 border-rose-500',
     columns: [
       {
-        title: 'Apparel',
-        items: ['All Men', 'T-shirts', 'Shirts', 'Jeans', 'Trousers', 'Jackets']
+        title: 'Casual & Outerwear',
+        items: ['All Men', 'T-shirts', 'Shirts', 'Jeans', 'Trousers', 'Hoodies', 'Jackets', 'Sweatshirts', 'Shorts']
+      },
+      {
+        title: 'Ethnic & Formal',
+        items: ['Ethnic wear', 'Kurtas', 'Formal wear', 'Blazers', 'Suits', 'Innerwear']
       },
       {
         title: 'Footwear & Accessories',
-        items: ['Shoes', 'Watches', 'Wallets', 'Bags', 'Sunglasses']
+        items: ['Shoes', 'Sneakers', 'Sandals', 'Watches', 'Wallets', 'Belts', 'Sunglasses', 'Bags']
       }
     ]
   },
@@ -25,12 +30,16 @@ export const MEGA_MENU_DATA = {
     border: 'border-b-2 border-pink-500',
     columns: [
       {
-        title: 'Clothing',
-        items: ['All Women', 'Dresses', 'Tops', 'Kurtis', 'Sarees', 'Jeans', 'Trousers']
+        title: 'Ethnic & Festive',
+        items: ['All Women', 'Kurtis', 'Sarees', 'Lehengas', 'Salwar suits', 'Ethnic wear']
       },
       {
-        title: 'Footwear & Accessories',
-        items: ['Handbags', 'Shoes', 'Watches', 'Jewellery', 'Sunglasses']
+        title: 'Western & Casual',
+        items: ['T-shirts', 'Shirts', 'Dresses', 'Tops', 'Jeans', 'Trousers', 'Skirts', 'Leggings', 'Jackets', 'Western wear']
+      },
+      {
+        title: 'Footwear & Jewellery',
+        items: ['Heels', 'Sneakers', 'Sandals', 'Handbags', 'Watches', 'Jewellery', 'Sunglasses']
       }
     ]
   },
@@ -40,15 +49,15 @@ export const MEGA_MENU_DATA = {
     columns: [
       {
         title: 'Devices & Computing',
-        items: ['All Electronics', 'Smartphones', 'Laptops', 'Tablets', 'Cameras']
+        items: ['All Electronics', 'Smartphones', 'Laptops', 'Tablets', 'Monitors', 'Printers', 'Smart TVs', 'Cameras']
       },
       {
         title: 'Audio & Wearables',
         items: ['Headphones', 'Earbuds', 'Smartwatches', 'Speakers']
       },
       {
-        title: 'Power & Accessories',
-        items: ['Power banks', 'Chargers']
+        title: 'Gaming & Peripherals',
+        items: ['Gaming accessories', 'Keyboards', 'Mice', 'Power banks', 'Chargers', 'Computer accessories']
       }
     ]
   },
@@ -57,12 +66,16 @@ export const MEGA_MENU_DATA = {
     border: 'border-b-2 border-amber-500',
     columns: [
       {
-        title: 'Living & Decor',
-        items: ['All Home & Kitchen', 'Furniture', 'Home decor', 'Lighting', 'Curtains', 'Bedsheets']
+        title: 'Living & Furniture',
+        items: ['All Home & Kitchen', 'Furniture', 'Beds', 'Sofas', 'Tables', 'Chairs', 'Mattresses']
       },
       {
-        title: 'Kitchen & Appliances',
+        title: 'Kitchen & Dining',
         items: ['Kitchen appliances', 'Cookware', 'Storage products']
+      },
+      {
+        title: 'Decor & Essentials',
+        items: ['Bedsheets', 'Curtains', 'Home decor', 'Lighting', 'Cleaning products']
       }
     ]
   },
@@ -71,12 +84,26 @@ export const MEGA_MENU_DATA = {
     border: 'border-b-2 border-teal-500',
     columns: [
       {
-        title: 'Skincare & Makeup',
-        items: ['All Beauty & Personal Care', 'Skincare', 'Makeup']
+        title: 'Skincare & Cosmetics',
+        items: ['All Beauty & Personal Care', 'Skincare', 'Makeup', 'Perfumes', 'Fragrances']
       },
       {
-        title: 'Grooming & Fragrance',
-        items: ['Perfumes', 'Hair care', 'Grooming products']
+        title: 'Hair & Personal Care',
+        items: ['Hair care', 'Hair Styling', 'Bath & Body', 'Oral Care', 'Grooming products', 'Personal hygiene']
+      }
+    ]
+  },
+  'Grocery': {
+    accent: 'text-green-600',
+    border: 'border-b-2 border-green-500',
+    columns: [
+      {
+        title: 'Daily Staples & Kitchen',
+        items: ['All Grocery', 'Rice', 'Atta', 'Pulses', 'Cooking Oil', 'Spices']
+      },
+      {
+        title: 'Snacks & Beverages',
+        items: ['Snacks', 'Beverages', 'Breakfast Foods', 'Chocolates', 'Dry Fruits']
       }
     ]
   },
@@ -89,22 +116,50 @@ export const MEGA_MENU_DATA = {
         items: ['All Sports & Fitness', 'Sports shoes', 'T-shirts', 'Track pants']
       },
       {
-        title: 'Equipment & Sports',
-        items: ['Gym equipment', 'Fitness accessories', 'Cricket products', 'Football products']
+        title: 'Equipment & Sports Gear',
+        items: ['Gym equipment', 'Fitness accessories', 'Cricket products', 'Football products', 'Badminton racquets', 'Yoga mats']
       }
     ]
   },
-  'Kids': {
+  'Books': {
+    accent: 'text-indigo-600',
+    border: 'border-b-2 border-indigo-500',
+    columns: [
+      {
+        title: 'Literature & General',
+        items: ['All Books', 'Fiction', 'Non-fiction', 'Children\'s Books']
+      },
+      {
+        title: 'Academic & Tech',
+        items: ['Programming', 'Engineering', 'Competitive Exams']
+      }
+    ]
+  },
+  'Toys & Baby': {
     accent: 'text-orange-600',
     border: 'border-b-2 border-orange-500',
     columns: [
       {
-        title: 'Clothing & Footwear',
-        items: ['All Kids', 'Boys clothing', 'Girls clothing', 'Kids shoes']
+        title: 'Toys & STEM Games',
+        items: ['All Toys & Baby', 'Toys', 'Games', 'Educational Toys']
       },
       {
-        title: 'Toys & School',
-        items: ['Toys', 'School accessories']
+        title: 'Baby & Kids Apparel',
+        items: ['Baby Care', 'Baby Clothing', 'Boys Clothing', 'Girls Clothing', 'Kids Shoes']
+      }
+    ]
+  },
+  'Automotive': {
+    accent: 'text-red-600',
+    border: 'border-b-2 border-red-500',
+    columns: [
+      {
+        title: 'Riding Gear & Safety',
+        items: ['All Automotive', 'Helmets', 'Riding Gear']
+      },
+      {
+        title: 'Vehicle Accessories & Care',
+        items: ['Car Accessories', 'Bike Accessories', 'Car Care']
       }
     ]
   }
@@ -121,7 +176,8 @@ export default function Navbar({
   onOpenWishlist,
   onOpenAuth,
   activeView,
-  setActiveView
+  setActiveView,
+  onSelectProduct
 }) {
   const { user, isAdmin, logout } = useAuth();
   const { totalItems, openCart } = useCart();
@@ -129,6 +185,7 @@ export default function Navbar({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeMegaCategory, setActiveMegaCategory] = useState(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const handleSubCategoryClick = (categoryName, subItem) => {
     setSelectedCategory(categoryName);
@@ -138,7 +195,6 @@ export default function Navbar({
       setSelectedSubCategory(subItem);
     }
     setActiveMegaCategory(null);
-    if (activeView !== 'home') setActiveView('home');
   };
 
   const handleMainCategoryClick = (categoryName) => {
@@ -148,96 +204,135 @@ export default function Navbar({
     if (activeView !== 'home') setActiveView('home');
   };
 
+  const [showMobileSuggestions, setShowMobileSuggestions] = useState(false);
+
+  const handlePerformSearch = (term) => {
+    const finalTerm = (term !== undefined ? term : searchTerm).trim();
+    if (finalTerm) {
+      setSearchTerm(finalTerm);
+      setShowSuggestions(false);
+      setShowMobileSuggestions(false);
+      if (activeView !== 'home') setActiveView('home');
+      try {
+        const stored = JSON.parse(localStorage.getItem('buynest_recent_searches') || '[]');
+        const updated = [finalTerm, ...stored.filter(s => s.toLowerCase() !== finalTerm.toLowerCase())].slice(0, 8);
+        localStorage.setItem('buynest_recent_searches', JSON.stringify(updated));
+      } catch (err) {}
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-40 bg-white shadow-xs border-b border-slate-200">
-      {/* Top Announcement Bar */}
-      <div className="bg-slate-950 text-slate-300 text-[11px] py-1.5 px-4 text-center font-semibold tracking-wide flex items-center justify-center gap-2">
-        <span>🇮🇳 <strong>BUYNEST MEGA DEALS</strong>: Free Express Delivery on orders above ₹999 + Instant AI Personal Shopper</span>
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 transition-all shadow-xs">
+      {/* Top Banner for Express Indian Delivery & Cancellation */}
+      <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 text-white text-[11px] py-1.5 px-4 text-center font-medium tracking-wide flex items-center justify-center gap-2 border-b border-white/5">
+        <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>✨ <strong>BUYNEST FESTIVE 2026:</strong> Free Express Delivery across India &bull; 1-Click Order Cancellation &bull; Instant Razorpay UPI Refunds</span>
       </div>
 
+      {/* Main Header Row */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-18 gap-2 sm:gap-4">
-          {/* Logo */}
-          <button
-            onClick={() => {
-              setSelectedCategory('all');
-              setSelectedSubCategory('all');
-              setActiveView('home');
-            }}
-            className="flex items-center gap-2 group shrink-0"
-          >
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 group-hover:scale-105 transition-transform">
-              <ShoppingBag className="w-5 h-5" />
-            </div>
-            <div className="text-left">
-              <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">
-                BUY<span className="text-emerald-600">NEST</span>
-              </span>
-              <span className="hidden sm:block text-[9px] font-black text-emerald-600 uppercase tracking-widest -mt-1">
-                AI Smart Marketplace
-              </span>
-            </div>
-          </button>
+        <div className="flex items-center justify-between h-20 gap-4">
+          {/* Logo & Brand Identity */}
+          <div className="flex items-center shrink-0">
+            <button
+              onClick={() => {
+                setActiveView('home');
+                setSelectedCategory('all');
+                setSelectedSubCategory('all');
+                setSearchTerm('');
+              }}
+              className="flex items-center gap-2.5 text-left group"
+            >
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-slate-950 via-slate-900 to-emerald-600 flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
+                <ShoppingBag className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <span className="text-2xl font-black tracking-tight text-slate-900 flex items-center">
+                  BUY<span className="text-emerald-600">NEST</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block ml-1"></span>
+                </span>
+                <span className="hidden sm:block text-[9px] font-extrabold text-slate-400 -mt-1 tracking-widest uppercase">
+                  INDIA’S PREMIER AI STORE
+                </span>
+              </div>
+            </button>
+          </div>
 
-          {/* Desktop Mega-Menu Nav Links */}
-          <nav className="hidden xl:flex items-center gap-1 h-full">
-            {Object.keys(MEGA_MENU_DATA).map((catName) => {
-              const isActive = selectedCategory === catName;
-              const isHovered = activeMegaCategory === catName;
-              return (
-                <div
-                  key={catName}
-                  className="h-full flex items-center"
-                  onMouseEnter={() => setActiveMegaCategory(catName)}
-                >
-                  <button
-                    onClick={() => handleMainCategoryClick(catName)}
-                    className={`h-full px-2.5 text-[11px] font-black uppercase tracking-wider transition-colors flex items-center gap-0.5 ${
-                      isActive || isHovered
-                        ? `${MEGA_MENU_DATA[catName].accent} border-b-2 border-current font-extrabold`
-                        : 'text-slate-700 hover:text-slate-950'
-                    }`}
-                  >
-                    {catName}
-                  </button>
-                </div>
-              );
-            })}
-          </nav>
-
-          {/* Live Search Bar */}
-          <div className="flex-1 max-w-xs md:max-w-md relative hidden md:block">
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          {/* CENTERPIECE: VERY LARGE & PROMINENT DESKTOP SEARCH BAR (45% - 55% width) */}
+          <div className="flex-1 max-w-2xl mx-4 lg:mx-8 hidden md:block">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handlePerformSearch();
+              }}
+              className="relative w-full group"
+            >
+              <Search className="w-5 h-5 text-slate-400 group-focus-within:text-emerald-600 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none transition-colors" />
               <input
                 type="text"
                 value={searchTerm}
+                onFocus={() => setShowSuggestions(true)}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
+                  setShowSuggestions(true);
                   if (activeView !== 'home') setActiveView('home');
                 }}
-                placeholder="Search products, brands (boAt, Puma, Levis), categories..."
-                className="w-full pl-9 pr-4 py-2 text-xs bg-slate-100 hover:bg-slate-200/70 focus:bg-white border border-transparent focus:border-slate-300 rounded-full focus:outline-none transition-all shadow-inner"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handlePerformSearch();
+                  }
+                }}
+                placeholder="Search for products, brands and more..."
+                className="w-full h-[50px] pl-12 pr-28 text-[15px] bg-slate-100/90 hover:bg-slate-200/60 focus:bg-white text-slate-900 placeholder:text-slate-400 font-medium rounded-full border-2 border-slate-200/90 focus:border-emerald-500 focus:outline-none transition-all shadow-inner focus:shadow-xl"
               />
+              
+              {/* Clear button */}
               {searchTerm && (
                 <button
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                  type="button"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setShowSuggestions(false);
+                  }}
+                  className="absolute right-24 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold w-6 h-6 rounded-full hover:bg-slate-200/70 flex items-center justify-center transition"
+                  title="Clear search"
                 >
                   ✕
                 </button>
               )}
-            </div>
+
+              {/* Prominent Search Action Button */}
+              <button
+                type="submit"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-full text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-emerald-600/20"
+              >
+                <Search className="w-3.5 h-3.5" />
+                <span className="hidden lg:inline">Search</span>
+              </button>
+
+              <SearchSuggestions
+                searchTerm={searchTerm}
+                isVisible={showSuggestions}
+                onClose={() => setShowSuggestions(false)}
+                onSelectSuggestion={(sub) => handlePerformSearch(sub)}
+                onPerformSearch={(query) => handlePerformSearch(query)}
+                onSelectProduct={(prod) => {
+                  if (onSelectProduct) onSelectProduct(prod);
+                  setShowSuggestions(false);
+                }}
+              />
+            </form>
           </div>
 
           {/* Action Icons */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {/* AI Assistant Quick Trigger */}
             <button
               onClick={onOpenAiAssistant}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xs shadow-md shadow-emerald-600/25 hover:shadow-lg transition-all hover:scale-105 active:scale-95 group"
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/25 hover:shadow-lg transition-all hover:scale-105 active:scale-95 group"
             >
-              <Sparkles className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
+              <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" />
               <span className="hidden sm:inline">Ask AI</span>
             </button>
 
@@ -276,7 +371,7 @@ export default function Navbar({
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className="flex items-center gap-1.5 p-1.5 rounded-2xl hover:bg-slate-100 transition text-sm font-medium text-slate-700"
                 >
-                  <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
+                  <div className="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shadow-sm">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
@@ -328,7 +423,7 @@ export default function Navbar({
             ) : (
               <button
                 onClick={onOpenAuth}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 transition shadow-sm"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 transition shadow-sm"
               >
                 <User className="w-3.5 h-3.5" />
                 <span>Sign In</span>
@@ -338,10 +433,124 @@ export default function Navbar({
             {/* Mobile Hamburger Toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-slate-700 hover:bg-slate-100 rounded-xl xl:hidden"
+              className="p-2 text-slate-700 hover:bg-slate-100 rounded-xl md:hidden"
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
+          </div>
+        </div>
+
+        {/* PROMINENT MOBILE SEARCH BAR (100% full width, 48px height) */}
+        <div className="md:hidden pb-3 pt-0.5 relative">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handlePerformSearch();
+            }}
+            className="relative w-full"
+          >
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={searchTerm}
+              onFocus={() => setShowMobileSuggestions(true)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setShowMobileSuggestions(true);
+                if (activeView !== 'home') setActiveView('home');
+              }}
+              placeholder="Search for products, brands and more..."
+              className="w-full h-[46px] pl-10 pr-20 text-sm bg-slate-100 focus:bg-white text-slate-900 placeholder:text-slate-400 font-medium rounded-2xl border border-slate-200 focus:border-emerald-500 focus:outline-none transition shadow-inner"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm('');
+                  setShowMobileSuggestions(false);
+                }}
+                className="absolute right-16 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold p-1"
+              >
+                ✕
+              </button>
+            )}
+            <button
+              type="submit"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-xs font-bold shadow-sm"
+            >
+              Search
+            </button>
+
+            <SearchSuggestions
+              searchTerm={searchTerm}
+              isVisible={showMobileSuggestions}
+              onClose={() => setShowMobileSuggestions(false)}
+              onSelectSuggestion={(sub) => handlePerformSearch(sub)}
+              onPerformSearch={(query) => handlePerformSearch(query)}
+              onSelectProduct={(prod) => {
+                if (onSelectProduct) onSelectProduct(prod);
+                setShowMobileSuggestions(false);
+              }}
+            />
+          </form>
+        </div>
+      </div>
+
+      {/* SECOND ROW: DESKTOP DEPARTMENT & CATEGORY NAVIGATION STRIP */}
+      <div className="hidden md:block bg-slate-50/90 border-t border-slate-200/70 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto flex items-center justify-between h-10">
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-1">
+            <button
+              onClick={() => {
+                setSelectedCategory('all');
+                setSelectedSubCategory('all');
+                setActiveMegaCategory(null);
+                if (activeView !== 'home') setActiveView('home');
+              }}
+              className={`px-3 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition ${
+                selectedCategory === 'all'
+                  ? 'bg-slate-900 text-white shadow-xs'
+                  : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/60'
+              }`}
+            >
+              All Categories
+            </button>
+
+            {Object.keys(MEGA_MENU_DATA).map((catName) => {
+              const isActive = selectedCategory === catName;
+              const isHovered = activeMegaCategory === catName;
+              return (
+                <div
+                  key={catName}
+                  className="relative h-full flex items-center"
+                  onMouseEnter={() => setActiveMegaCategory(catName)}
+                >
+                  <button
+                    onClick={() => handleMainCategoryClick(catName)}
+                    className={`px-2.5 py-1 text-[11px] font-black uppercase tracking-wider transition rounded-lg flex items-center gap-0.5 ${
+                      isActive
+                        ? 'bg-emerald-600 text-white font-extrabold shadow-xs'
+                        : isHovered
+                        ? 'text-emerald-700 bg-emerald-50 font-bold'
+                        : 'text-slate-700 hover:text-slate-950 hover:bg-slate-200/50'
+                    }`}
+                  >
+                    <span>{catName}</span>
+                    <ChevronDown className="w-3 h-3 opacity-60" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="text-[11px] font-semibold text-slate-500 hidden lg:flex items-center gap-3">
+            <span className="text-emerald-700 font-extrabold flex items-center gap-1">
+              ⚡ 950+ Authentic Products
+            </span>
+            <span>•</span>
+            <span>Free Express Delivery</span>
+            <span>•</span>
+            <span>100% Genuine Brands</span>
           </div>
         </div>
       </div>
