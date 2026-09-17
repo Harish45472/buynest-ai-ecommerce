@@ -38,8 +38,8 @@ A modern, full-stack Indian e-commerce web platform featuring dynamic product ca
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/Harish45472/buynest-ai-ecommerce.git
-cd buynest-ai-ecommerce
+git clone https://github.com/Harish45472/buynest-ecommerce-marketplace.git
+cd buynest-ecommerce-marketplace
 ```
 
 ### 2. Install Dependencies

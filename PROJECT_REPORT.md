@@ -5,8 +5,8 @@
 **Prepared by**: Full-Stack Development Team  
 **Date**: September 17, 2026  
 **Project Version**: 1.0.0 (Production Release)  
-**Repository (Primary)**: [https://github.com/Harish45472/buynest-ai-ecommerce](https://github.com/Harish45472/buynest-ai-ecommerce)  
-**Repository (Secondary)**: [https://github.com/Harish45472/ai-ecommerce-website](https://github.com/Harish45472/ai-ecommerce-website)  
+**Repository (Primary)**: [https://github.com/Harish45472/buynest-ecommerce-marketplace](https://github.com/Harish45472/buynest-ecommerce-marketplace)  
+**Repository (Secondary)**: [https://github.com/Harish45472/buynest-ai-ecommerce](https://github.com/Harish45472/buynest-ai-ecommerce)  
 
 ---
 
@@ -81,8 +81,8 @@ The platform bridges consumer shopping with conversational AI assistance, featur
 
 ### 1.3. Live Deliverables & Access Points
 
-- **Primary GitHub Repository**: [https://github.com/Harish45472/buynest-ai-ecommerce](https://github.com/Harish45472/buynest-ai-ecommerce)
-- **Secondary GitHub Repository**: [https://github.com/Harish45472/ai-ecommerce-website](https://github.com/Harish45472/ai-ecommerce-website)
+- **Primary GitHub Repository**: [https://github.com/Harish45472/buynest-ecommerce-marketplace](https://github.com/Harish45472/buynest-ecommerce-marketplace)
+- **Secondary GitHub Repository**: [https://github.com/Harish45472/buynest-ai-ecommerce](https://github.com/Harish45472/buynest-ai-ecommerce)
 - **Local Application Port**: `http://localhost:5000` (Unified Production) or `http://localhost:5173` (Vite Dev)
 - **API Health Endpoint**: `http://localhost:5000/api/health`
 
@@ -472,8 +472,8 @@ To clone and run BUYNEST on any developer laptop or workstation:
 
 ```bash
 # Step 1: Clone the primary GitHub repository
-git clone https://github.com/Harish45472/buynest-ai-ecommerce.git
-cd buynest-ai-ecommerce
+git clone https://github.com/Harish45472/buynest-ecommerce-marketplace.git
+cd buynest-ecommerce-marketplace
 
 # Step 2: Install dependencies (installs root, backend, and frontend packages)
 npm install
