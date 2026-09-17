@@ -34,30 +34,28 @@ A modern, full-stack Indian e-commerce web platform featuring dynamic product ca
 
 ---
 
-## 🚀 Quick Start Guide (Combined Fullstack)
+## 🚀 Quick Start Guide (Run from GitHub)
 
-### 1. Install All Dependencies
-From the project root directory:
+### 1. Clone the Repository
 ```bash
-npm run install:all
+git clone https://github.com/Harish45472/ai-ecommerce-website.git
+cd ai-ecommerce-website
 ```
 
-### 2. Seed Database
+### 2. Install Dependencies
 ```bash
-npm run seed
+npm install
 ```
+*(The automatic `postinstall` script automatically installs both `server` and `client` dependencies).*
 
 ### 3. Run the Application
 
 #### Option A: Unified Fullstack Mode (Single Port 5000 — Recommended)
 ```bash
-# Build frontend static bundle
-npm run build
-
-# Start combined server (serves both React Frontend & Express API on port 5000)
 npm start
 ```
-Open **[http://localhost:5000](http://localhost:5000)** in your browser!
+> **Note:** The server **automatically seeds the SQLite database** on first boot with 1,280+ products and demo accounts! If the frontend bundle isn't built yet, the server will auto-build it.
+> Open **[http://localhost:5000](http://localhost:5000)** in your browser!
 
 #### Option B: Concurrent Development Mode (Vite Hot Reload + Express API)
 ```bash

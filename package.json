@@ -5,11 +5,12 @@
   "scripts": {
     "start": "node server/server.js",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "cd server && npm run dev",
-    "dev:client": "cd client && npm run dev",
-    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
-    "seed": "cd server && npm run seed",
-    "build": "cd client && npm run build",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "seed": "npm --prefix server run seed",
+    "postinstall": "npm --prefix server install && npm --prefix client install",
+    "install:all": "npm install && npm --prefix server install && npm --prefix client install",
     "test": "node server/test-suite.js",
     "audit:images": "node scripts/validateProductImages.js"
   },

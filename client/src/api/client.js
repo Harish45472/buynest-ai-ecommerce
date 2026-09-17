@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+// Resolve API baseURL: use VITE_API_URL when provided, otherwise default to relative /api
+const rawApiUrl = import.meta.env.VITE_API_URL || '';
+const baseURL = rawApiUrl ? `${rawApiUrl.replace(/\/$/, '')}/api` : '/api';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL,
   headers: {
     'Content-Type': 'application/json'
   }
